@@ -1,0 +1,8 @@
+python-socketio==5.5.0
+PyYAML==6.0
+requests==2.26.0
+substrate-interface==1.1.1
+eventlet==0.33.0
+Flask-Cors==3.0.10
+Flask-SocketIO==5.1.1
+transitions==0.8.0

@@ -1,0 +1,5 @@
+maxKB: 200000
+when: "d"
+backups: 4
+storeFor: 5
+logPath: "./etc/log"
