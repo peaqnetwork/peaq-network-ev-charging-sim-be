@@ -65,17 +65,17 @@ service:
   name: peaq-network-ev-charging-sim-be
   type: ClusterIP
   externalPort: 80
-  internalPort: 8080
+  internalPort: 25566
   annotations: {}
   # Add labels to the service
   labels: {}
 resources:
   limits:
     cpu: 400m
-    memory: 256Mi
+    memory: 512Mi
   requests:
     cpu: 200m
-    memory: 128Mi
+    memory: 256Mi
 probePath: /
 livenessProbe:
   initialDelaySeconds: 60

@@ -2,7 +2,7 @@ apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
   creationTimestamp: null
-  name: pullrequest
+  name: devbranch
 spec:
   pipelineSpec:
     tasks:
@@ -11,7 +11,7 @@ spec:
       taskSpec:
         metadata: {}
         stepTemplate:
-          image: uses:jenkins-x/jx3-pipeline-catalog/tasks/python/pullrequest.yaml@versionStream
+          image: uses:jenkins-x/jx3-pipeline-catalog/tasks/python/release.yaml@versionStream
           name: ""
           resources:
             requests:
@@ -19,8 +19,10 @@ spec:
               memory: 512Mi
           workingDir: /workspace/source
         steps:
-        - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
+        - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone.yaml@versionStream
           name: ""
+          resources: {}
+        - name: next-version
           resources: {}
         - name: jx-variables
           resources: {}
@@ -30,8 +32,16 @@ spec:
           resources: {}
         - name: build-container-build
           resources: {}
-        - name: promote-jx-preview
+        - name: promote-changelog
           resources: {}
+        - name: promote-helm-release
+          resources: {}
+        - name: promote-jx-promote
+          resources: {}
+          script: |
+            #!/usr/bin/env sh
+            source .jx/variables.sh
+            jx promote -b --timeout 1h --no-poll --env devbr
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 12h0m0s
