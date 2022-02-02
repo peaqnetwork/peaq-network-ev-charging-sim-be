@@ -41,31 +41,27 @@ def create_app(secret: str, debugging: bool, q: Queue, node_addr: str, kp: Keypa
         logger.info('publishing did')
         si: SubstrateInterface
         try:
-            si = get_substrate_connection(node_addr)
-            r = publish_did(si, kp, logger)
-            si.close()
-            if r.is_success:
-                return Response('{"message": success}', status=201, mimetype='application/json')
-            else:
-                if not r.error_message == None:
-                    return Response(f'{{"message": {r.error_message}}}', status=400, mimetype='application/json')
-                return Response(f'{{"message": failed to publish did for unknown reason}}', status=400, mimetype='application/json')
+            with get_substrate_connection(node_addr) as si:
+                r = publish_did(si, kp, logger)
+                if r.is_success:
+                    return Response('{"message": success}', status=201, mimetype='application/json')
+                else:
+                    if not r.error_message == None:
+                        return Response(f'{{"message": {r.error_message}}}', status=200, mimetype='application/json')
+                    return Response(f'{{"message": failed to publish did for unknown reason}}', status=200, mimetype='application/json')
         except Exception as err:
             logger.error(f'error during publishing occurred: {err}')
-            si.close()
-            return Response('{"message": "something unexpected happen"}', status=500, mimetype='application/json')
+            return Response('{"message": "something unexpected happen"}', status=200, mimetype='application/json')
 
     @app.route('/balance', methods=['GET'])
     def balance():
         si: SubstrateInterface
         try:
-            si = get_substrate_connection(node_addr)
-            b = get_station_balance(si, kp, logger)
-            si.close()
-            return Response(f'{{"balance": {b}}}', status=200, mimetype='application/json')
+            with get_substrate_connection(node_addr) as si:
+                b = get_station_balance(si, kp, logger)
+                return Response(f'{{"balance": {b}}}', status=200, mimetype='application/json')
         except Exception as err:
-            si.close()
-            return Response('{"message": something bad happen}', status=500, mimetype='application/json')
+            return Response('{"message": something bad happen}', status=200, mimetype='application/json')
 
     @socketio.on('connect')
     def connect():
