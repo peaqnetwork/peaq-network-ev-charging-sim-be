@@ -44,11 +44,11 @@ def create_app(secret: str, debugging: bool, q: Queue, node_addr: str, kp: Keypa
             with get_substrate_connection(node_addr) as si:
                 r = publish_did(si, kp, logger)
                 if r.is_success:
-                    return Response('{"message": success}', status=201, mimetype='application/json')
+                    return Response('{"message": "success"}', status=201, mimetype='application/json')
                 else:
                     if not r.error_message == None:
-                        return Response(f'{{"message": {r.error_message}}}', status=200, mimetype='application/json')
-                    return Response(f'{{"message": failed to publish did for unknown reason}}', status=200, mimetype='application/json')
+                        return Response(f'{{"message": "{r.error_message}"}}', status=200, mimetype='application/json')
+                    return Response(f'{{"message": "failed to publish did for unknown reason"}}', status=200, mimetype='application/json')
         except Exception as err:
             logger.error(f'error during publishing occurred: {err}')
             return Response('{"message": "something unexpected happen"}', status=200, mimetype='application/json')
@@ -61,7 +61,7 @@ def create_app(secret: str, debugging: bool, q: Queue, node_addr: str, kp: Keypa
                 b = get_station_balance(si, kp, logger)
                 return Response(f'{{"balance": {b}}}', status=200, mimetype='application/json')
         except Exception as err:
-            return Response('{"message": something bad happen}', status=200, mimetype='application/json')
+            return Response('{"message": "something bad happen"}', status=200, mimetype='application/json')
 
     @socketio.on('connect')
     def connect():
