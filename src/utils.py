@@ -1,6 +1,7 @@
 import yaml
 import logging
 import re
+import redis
 
 from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.utils.ss58 import ss58_encode
@@ -44,6 +45,20 @@ def parse_logger_config(path: str):
     if 'storeFor' in data:
         storeFor = data['storeFor']
     return [when, maxKB, backups, logPath, storeFor]
+
+def parse_redis_config(path: str):
+    with open(path) as f:
+        data = yaml.safe_load(f)
+    if 'host' in data:
+        host = data['host']
+    if 'port' in data:
+        port = data['port']
+    if 'db' in data:
+        db = data['db']
+    return [host, port, db]
+
+def init_redis(host: str, port: int, db: int):
+    return redis.Redis(host=host, port=port, db=db)
 
 def get_substrate_connection(url: str) -> SubstrateInterface:
     # Check the type_registry_preset_dict = load_type_registry_preset(type_registry_name)

@@ -3,32 +3,31 @@ import datetime
 from queue import Queue
 import logging
 import json
+import redis
 
 from substrateinterface import Keypair, ExtrinsicReceipt
 from substrateinterface.utils.ss58 import ss58_encode
 import transitions
 from src.utils import calculate_multi_sig, get_substrate_connection, send_token_multisig_wallet, send_service_deliver
-from src.utils import compose_delivery_info, publish_did, read_did
+from src.utils import compose_delivery_info, publish_did, read_did, get_station_balance
 from src.charging_utils import calculate_charging_result
 
 
-def run_business_logic(ws_url: str, q: Queue, socketio, kp: Keypair, logger: logging.Logger):
-    business_logic = BusinessLogic(ws_url, q, socketio, kp, logger)
+def run_business_logic(ws_url: str, socketio, kp: Keypair, r: redis.Redis, logger: logging.Logger):
+    business_logic = BusinessLogic(ws_url, socketio, kp, r, logger)
     business_logic.start()
 
 
 class BusinessLogic():
     states = ['idle', 'verified', 'charging', 'charged', 'approving']
 
-    def __init__(self, ws_url: str, q: Queue, socketio, kp: Keypair, logger: logging.Logger):
-        self._q = q
+    def __init__(self, ws_url: str, socketio, kp: Keypair, r: redis.Redis, logger: logging.Logger):
         self._substrate = get_substrate_connection(ws_url)
         self._machine = transitions.Machine(
             model=self,
             states=BusinessLogic.states,
             initial='idle'
         )
-        self._socketio = socketio
         self._kp = kp
         self._multi_threshold = 2
 
@@ -41,6 +40,7 @@ class BusinessLogic():
         self._machine.on_enter_idle('reset')
 
         self._logger = logger
+        self._redis = r
 
         self.reset()
 
@@ -91,8 +91,11 @@ class BusinessLogic():
 
     def emit_data(self, data_type: str, log_data: dict):
         raw_data = json.dumps(log_data)
-        self._socketio.emit(data_type, raw_data)
-        #logging.info(f'{data_type}: {raw_data}')
+        data_to_send = {
+            'type': data_type,
+            'data': raw_data,
+        }
+        self._redis.publish("out", json.dumps(data_to_send).encode('ascii'))
         self._logger.info(f'{data_type}: {raw_data}')
 
     def emit_log(self, log_data: dict):
@@ -136,11 +139,45 @@ class BusinessLogic():
             except Exception as err:
                 self._logger.error(f'failed to publish did: {err}')
 
+
+        subcriber = self._redis.pubsub()
+        subcriber.subscribe("in")
+
         while True:
-            event = self._q.get(block=True)
+            event_data = subcriber.get_message(True, timeout=30000.0)
+
+            if event_data == None:
+                continue
+            else:
+                event = json.loads(event_data['data'])
 
             if event['event_id'] == 'ExtrinsicSuccess':
                 continue
+
+            if event['event_id'] == 'GetBalance':
+                try:
+                    balance = get_station_balance(self._substrate, self._kp, self._logger)
+                    self.emit_data("GetBalanceResponse", {'data': balance, 'success' : True})
+                except Exception as e:
+                    self._logger.error(f'exception happen when acquiring balance: {e}')
+                    self.emit_data("GetBalanceResponse", {'data': 0, 'success' : False})
+
+            if event['event_id'] == 'GetPK':
+                self.emit_data("GetPKResponse", {'data': self._kp.ss58_address, 'success' : True})
+
+            if event['event_id'] == 'PublishDID':
+                try:
+                    receipt = publish_did(self._substrate, self._kp, self._logger)
+                    if receipt.is_success:
+                        self.emit_data("PublishDIDResponse", {'data': self._kp.ss58_address, 'success' : True})
+                    else:
+                        if not r.error_message == None:
+                            self.emit_data("GetPKResponse", {"message":  receipt.error_message, 'success' : False})
+                        self.emit_data("PublishDIDResponse", {"message": "failed to publish did for unknown reason", 'success' : False})
+                except Exception as err:
+                    self._logger.error(f'error during publishing occurred: {err}')
+                    self.emit_data("PublishDIDResponse", {"message": "something unexpected happen", 'success' : False})
+
 
             if self.is_service_requested_event(event, self._kp.ss58_address):
                 if not self.is_idle():
@@ -163,7 +200,11 @@ class BusinessLogic():
                     'token_deposited': self._charging_info['deposit_token'],
                 })
                 self.emit_log({'state': self.state, 'data': 'ServiceRequested received'})
-                self._socketio.emit('log', 'ServiceRequested received')
+                data_to_send = {
+                    'type': "log",
+                    'data': "ServiceRequested received",
+                }
+                self._redis.publish("out", json.dumps(data_to_send).encode('ascii'))
 
                 self.check(self._charging_info)
                 if self.is_idle():
@@ -190,12 +231,12 @@ class BusinessLogic():
 
             elif self.is_finish_charging(event):
                 if not self.is_charging():
-                    self._logger.error(f'received "finished charging" event while not in state "charging" event: {event["event_id"]}: {event["attributes"]}')
+                    self._logger.error(f'received "finished charging" event while not in state "charging" event: {event["event_id"]}: {event["data"]}')
                     continue
 
                 self.end_charging()
                 self._logger.info('ended charging')
-                self.emit_log({'state': self.state, 'data': 'Charging end', 'info': event['attributes']})
+                self.emit_log({'state': self.state, 'data': 'Charging end', 'info': event['data']})
 
                 self._charging_info['charging_end_time'] = datetime.datetime.now()
                 charging_result = calculate_charging_result(
