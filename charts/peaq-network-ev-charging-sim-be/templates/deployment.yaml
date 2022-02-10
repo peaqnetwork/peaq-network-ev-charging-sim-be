@@ -71,6 +71,16 @@ spec:
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
         resources:
 {{ toYaml .Values.resources | indent 12 }}
+      - name: {{ .Values.redis.name }}
+        image:  "{{ .Values.redis.image }}:{{ .Values.redis.tag }}"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: VERSION
+            value: latest
+        envFrom: null
+        ports:
+        - name: http
+          containerPort: {{ .Values.redis.internalPort }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       imagePullSecrets:
 {{- range $pval := .Values.jx.imagePullSecrets }}
