@@ -4,13 +4,14 @@ from threading import Thread
 import argparse
 import logging
 import os
+import redis
 
 import eventlet
 from substrateinterface import Keypair
 from src import app
 from src.bs_logic import run_business_logic
 from src.substrate_monitor import run_substrate_monitor
-from src.utils import get_substrate_connection, parse_config, parse_logger_config, generate_key_pair
+from src.utils import get_substrate_connection, parse_config, parse_logger_config, generate_key_pair, parse_redis_config, init_redis
 from flask_socketio import SocketIO
 from src.logger import init_logger
 
@@ -22,15 +23,20 @@ __author__ = 'peaq'
 RUNTIME_ENV = 'RUNTIME_ENV'
 RUNTIME_DEFAULT = 'dev'
 
-def create_main_logic(ws_url: str, socketio: SocketIO, q: Queue, kp_provider: Keypair, logger: logging.Logger):
-    monitor_thread = Thread(target=run_substrate_monitor, args=(ws_url, q,))
+def create_main_logic(ws_url: str, socketio: SocketIO, kp_provider: Keypair, r: redis.Redis, logger: logging.Logger):
+    monitor_thread = Thread(target=run_substrate_monitor, args=(ws_url, r,))
     business_logic_thread = Thread(target=run_business_logic,
-                                   args=(ws_url, q, socketio, kp_provider,logger,))
+                                   args=(ws_url, socketio, kp_provider, r, logger,))
+
+    read_redis_thread = Thread(target=app.redis_reader, args=(socketio, r))
+
     monitor_thread.start()
     business_logic_thread.start()
+    read_redis_thread.start()
 
     monitor_thread.join()
     business_logic_thread.join()
+    read_redis_thread.join()
 
 
 def parse_arguement():
@@ -45,6 +51,8 @@ def parse_arguement():
                         type=str, default='ws://127.0.0.1:9944')
     parser.add_argument('--lconfig', help='logger config yaml file',
                         type=str, default='etc/logger.yaml')
+    parser.add_argument('--rconfig', help='redis config yaml file',
+                        type=str, default='etc/redis.yaml')
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -52,6 +60,9 @@ if __name__ == '__main__':
 
     params = parse_logger_config(args.lconfig)
     logger = init_logger(params[0], params[1], params[2], params[3], params[4])
+
+    params = parse_redis_config(args.rconfig)
+    redis = init_redis(params[0], params[1], params[2])
 
     # Test whether the node ws is available
     try:
@@ -66,7 +77,6 @@ if __name__ == '__main__':
     else:
         kp_provider = generate_key_pair(logger)
 
-    q = Queue()
-    be, socketio = app.create_app('secret', True, q, args.node_ws, kp_provider, logger)
-    socketio.start_background_task(create_main_logic, args.node_ws, socketio, q, kp_provider, logger)
+    be, socketio = app.create_app('secret', True, args.node_ws, kp_provider, redis, logger)
+    socketio.start_background_task(create_main_logic, args.node_ws, socketio, kp_provider, redis, logger)
     socketio.run(be, debug=False, host=args.url, port=args.port)
