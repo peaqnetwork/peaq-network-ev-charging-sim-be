@@ -1,7 +1,6 @@
 import redis
 import json
 
-from queue import Queue
 from src.utils import get_substrate_connection
 
 

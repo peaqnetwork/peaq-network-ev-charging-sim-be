@@ -41,6 +41,7 @@ class BusinessLogic():
 
         self._logger = logger
         self._redis = r
+        self._ws_url = ws_url
 
         self.reset()
 
@@ -178,6 +179,8 @@ class BusinessLogic():
                     self._logger.error(f'error during publishing occurred: {err}')
                     self.emit_data("PublishDIDResponse", {"message": "something unexpected happen", 'success' : False})
 
+            if event['event_id'] == 'Reconnect':
+                self.reconnect()
 
             if self.is_service_requested_event(event, self._kp.ss58_address):
                 if not self.is_idle():
@@ -343,3 +346,11 @@ class BusinessLogic():
 
             self.emit_log({'state': self.state, 'data': f'{event["event_id"]}'})
             self._logger.info(f'Event: {event["event_id"]}: {event["attributes"]}')
+
+    def reconnect(self):
+        try:
+            self._substrate.close()
+            self._substrate = get_substrate_connection(self._ws_url)
+            self.emit_data('ReconnectResponse' ,{'message': 'Successfully reconnected', 'success' : True})
+        except Exception as err:
+            self.emit_data('ReconnectResponse' ,{'message': f'Reconnection failed: {err}', 'success' : False})
