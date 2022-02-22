@@ -109,7 +109,7 @@ def send_token_multisig_wallet(substrate: SubstrateInterface, kp: Keypair,
             'threshold': threshold,
             'other_signatories': other_signatories,
             'maybe_timepoint': None,
-            'call': str(payload.data),
+            'call': payload.value,
             'store_call': True,
             'max_weight': 1000000000,
         })

@@ -9,16 +9,16 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
-import requests
-
 from substrateinterface import Keypair
 from utils import fund, send_service_request
 from utils import deposit_money_to_multsig_wallet
 from utils import approve_token
-from src.utils import parse_config, get_substrate_connection, generate_key_pair_from_mnemonic, generate_key_pair
+from src.utils import parse_config, get_substrate_connection, generate_key_pair_from_mnemonic
+import socketio
 
 RUNTIME_ENV = 'RUNTIME_ENV'
 RUNTIME_DEFAULT = 'dev'
+
 
 def parse_arguement():
     parser = argparse.ArgumentParser()
@@ -64,8 +64,12 @@ class SubstrateMonitor():
             if event['event_id'] == 'ServiceRequested':
                 time.sleep(10)
                 logging.info('✅ ---- send request !!')
-                requests.post('http://127.0.0.1:25566/end_charging',
-                              data=json.dumps({'success': True}))
+                sio = socketio.Client()
+                sio.connect('http://127.0.0.1:25566')
+                sio.emit('json', json.dumps({
+                    'type': 'UserChargingStop',
+                    'data': True
+                }))
             if event['event_id'] == 'ServiceDelivered':
                 provider_addr = event['attributes'][0]
                 refund_info = {

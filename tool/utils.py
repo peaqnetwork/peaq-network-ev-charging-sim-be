@@ -109,7 +109,7 @@ def send_spent_token_from_multisig_wallet(
             'threshold': threshold,
             'other_signatories': [kp_consumer.ss58_address],
             'maybe_timepoint': None,
-            'call': str(payload.data),
+            'call': payload.value,
             'store_call': True,
             'max_weight': 1000000000,
         })
@@ -152,7 +152,7 @@ def send_refund_token_from_multisig_wallet(
             'threshold': threshold,
             'other_signatories': [kp_consumer.ss58_address],
             'maybe_timepoint': None,
-            'call': str(payload.data),
+            'call': payload.value,
             'store_call': True,
             'max_weight': 1000000000,
         })
