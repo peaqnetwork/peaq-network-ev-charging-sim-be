@@ -152,7 +152,7 @@ class BusinessLogic():
             else:
                 event = json.loads(event_data['data'])
 
-            if event['event_id'] == 'ExtrinsicSuccess':
+            if event['event_id'] == 'ExtrinsicSuccess' or event['event_id'] == 'NewBaseFeePerGas':
                 continue
 
             if event['event_id'] == 'GetBalance':
@@ -346,7 +346,6 @@ class BusinessLogic():
 
             self.emit_log({'state': self.state, 'data': f'{event["event_id"]}'})
             self._logger.info(f'Event: {event["event_id"]}: {event["attributes"]}')
-
     def reconnect(self):
         try:
             self._substrate.close()
