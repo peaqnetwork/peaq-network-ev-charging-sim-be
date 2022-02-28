@@ -3,14 +3,13 @@ import logging
 import redis
 
 from flask_socketio import SocketIO
-from flask import Flask, render_template, request, Response
+from flask import Flask
 from flask_cors import CORS
-from queue import Queue
 
-from src.utils import get_substrate_connection, publish_did, get_station_balance, get_substrate_connection
-from substrateinterface import Keypair, SubstrateInterface
+from substrateinterface import Keypair
 
-def create_app(secret: str, debugging: bool, node_addr: str, kp: Keypair, r: redis.Redis, logger: logging.Logger)  -> (Flask, SocketIO):
+
+def create_app(secret: str, debugging: bool, node_addr: str, kp: Keypair, r: redis.Redis, logger: logging.Logger) -> (Flask, SocketIO):
     app = Flask(__name__)
     # For now, we allow CORS for all domains on all routes
     CORS(app)
@@ -18,10 +17,6 @@ def create_app(secret: str, debugging: bool, node_addr: str, kp: Keypair, r: red
     app.config['DEBUG'] = debugging
 
     socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, cors_allowed_origins='*')
-
-    @app.route('/')
-    def index():
-        return render_template('index.html', async_mode=socketio.async_mode)
 
     @socketio.on('connect')
     def connect():
@@ -43,6 +38,7 @@ def create_app(secret: str, debugging: bool, node_addr: str, kp: Keypair, r: red
 
     return app, socketio
 
+
 def redis_reader(sock: SocketIO, r: redis.Redis):
     subcriber = r.pubsub()
     subcriber.subscribe("out")
@@ -50,7 +46,7 @@ def redis_reader(sock: SocketIO, r: redis.Redis):
     while True:
         event_data = subcriber.get_message(True, timeout=30000.0)
 
-        if event_data == None:
+        if not event_data:
             continue
         else:
             m = json.loads(event_data['data'])

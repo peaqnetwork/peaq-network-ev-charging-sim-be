@@ -1,5 +1,4 @@
 import sys
-from queue import Queue
 from threading import Thread
 import argparse
 import logging
@@ -22,6 +21,7 @@ __author__ = 'peaq'
 
 RUNTIME_ENV = 'RUNTIME_ENV'
 RUNTIME_DEFAULT = 'dev'
+
 
 def create_main_logic(ws_url: str, socketio: SocketIO, kp_provider: Keypair, r: redis.Redis, logger: logging.Logger):
     monitor_thread = Thread(target=run_substrate_monitor, args=(ws_url, r,))
@@ -54,6 +54,7 @@ def parse_arguement():
     parser.add_argument('--rconfig', help='redis config yaml file',
                         type=str, default='etc/redis.yaml')
     return parser.parse_args()
+
 
 if __name__ == '__main__':
     args = parse_arguement()
