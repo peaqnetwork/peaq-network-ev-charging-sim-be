@@ -63,3 +63,6 @@ coverage.xml
 logs/
 backend/etc/log*
 etc/log
+
+# Test cases
+test/tmp
