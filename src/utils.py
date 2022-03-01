@@ -10,6 +10,7 @@ from scalecodec.type_registry import load_type_registry_preset
 
 version = 'v2'
 
+
 def parse_config(path: str) -> Keypair:
     with open(path) as f:
         data = yaml.safe_load(f)
@@ -21,15 +22,18 @@ def parse_config(path: str) -> Keypair:
         raise IOError('Please check the config file, there is no config, uri/mnemonic')
     return kp
 
+
 def generate_key_pair(logger: logging.Logger) -> Keypair:
     mnemonic = Keypair.generate_mnemonic()
     logger.info(f'generated mnemonic: {mnemonic}')
     kp = Keypair.create_from_mnemonic(mnemonic)
     return kp
 
+
 def generate_key_pair_from_mnemonic(mnemonic: str) -> Keypair:
     kp = Keypair.create_from_mnemonic(mnemonic)
     return kp
+
 
 def parse_logger_config(path: str):
     with open(path) as f:
@@ -46,6 +50,7 @@ def parse_logger_config(path: str):
         storeFor = data['storeFor']
     return [when, maxKB, backups, logPath, storeFor]
 
+
 def parse_redis_config(path: str):
     with open(path) as f:
         data = yaml.safe_load(f)
@@ -57,8 +62,10 @@ def parse_redis_config(path: str):
         db = data['db']
     return [host, port, db]
 
+
 def init_redis(host: str, port: int, db: int):
     return redis.Redis(host=host, port=port, db=db)
+
 
 def get_substrate_connection(url: str) -> SubstrateInterface:
     # Check the type_registry_preset_dict = load_type_registry_preset(type_registry_name)
@@ -162,10 +169,9 @@ def send_service_deliver(substrate: SubstrateInterface, kp: Keypair,
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True,)
     show_extrinsic(receipt, 'service_delivered', logger)
 
-def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
-    nonce = substrate.get_account_nonce(kp.ss58_address)
 
-    did = """{"id": "did:peaq:%s",
+def _compose_did(kp: Keypair):
+    did = '''{"id": "did:peaq:%s",
       "controller": "did:peaq:%s",
       "verificationMethod": [
         {
@@ -185,10 +191,16 @@ def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logg
       "authentication": [
         "%s"
       ]
-    }""" % (kp.ss58_address, kp.ss58_address, kp.public_key.hex(), kp.ss58_address,
-    kp.ss58_address,  kp.ss58_address, kp.ss58_address, kp.public_key.hex())
+    }''' % (kp.ss58_address, kp.ss58_address, kp.public_key.hex(), kp.ss58_address,
+            kp.ss58_address, kp.ss58_address, kp.ss58_address, kp.public_key.hex())
 
-    did = re.sub(r"[\n\t\s]*", "", did)
+    return re.sub(r'[\n\t\s]*', '', did)
+
+
+def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
+    nonce = substrate.get_account_nonce(kp.ss58_address)
+
+    did = _compose_did(kp)
 
     call = substrate.compose_call(
         call_module='PeaqDid',
@@ -211,6 +223,34 @@ def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logg
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
     return receipt
 
+
+def republish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
+    nonce = substrate.get_account_nonce(kp.ss58_address)
+
+    did = _compose_did(kp)
+
+    call = substrate.compose_call(
+        call_module='PeaqDid',
+        call_function='update_attribute',
+        call_params={
+            'did_account': kp.ss58_address,
+            'name': version,
+            'value': did,
+            'valid_for': 20
+        }
+    )
+
+    extrinsic = substrate.create_signed_extrinsic(
+        call=call,
+        keypair=kp,
+        era={'period': 64},
+        nonce=nonce
+    )
+
+    receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+    return receipt
+
+
 def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
     nonce = substrate.get_account_nonce(kp.ss58_address)
 
@@ -232,6 +272,7 @@ def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger)
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
     return receipt
+
 
 def get_station_balance(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
     account_info = substrate.query(

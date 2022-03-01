@@ -1,15 +1,13 @@
 import json
 import datetime
-from queue import Queue
 import logging
-import json
 import redis
 
-from substrateinterface import Keypair, ExtrinsicReceipt
+from substrateinterface import Keypair
 from substrateinterface.utils.ss58 import ss58_encode
 import transitions
 from src.utils import calculate_multi_sig, get_substrate_connection, send_token_multisig_wallet, send_service_deliver
-from src.utils import compose_delivery_info, publish_did, read_did, get_station_balance
+from src.utils import compose_delivery_info, publish_did, read_did, republish_did, get_station_balance
 from src.charging_utils import calculate_charging_result
 
 
@@ -103,22 +101,22 @@ class BusinessLogic():
         self.emit_data('log', log_data)
 
     def emit_deposit_verified(self, data: dict):
-        named_data = {'event' : 'DepositVerified', 'state': self.state}
+        named_data = {'event': 'DepositVerified', 'state': self.state}
         named_data.update(data)
         self.emit_data('event', named_data)
 
     def emit_service_requested(self, data: dict):
-        named_data = {'event' : 'ServiceRequested', 'state': self.state}
+        named_data = {'event': 'ServiceRequested', 'state': self.state}
         named_data.update(data)
         self.emit_data('event', named_data)
 
     def emit_service_delivered(self, data: dict):
-        named_data = {'event' : 'ServiceDelivered', 'state': self.state}
+        named_data = {'event': 'ServiceDelivered', 'state': self.state}
         named_data.update(data)
         self.emit_data('event', named_data)
 
     def emit_balances_transferd(self, data: dict):
-        named_data = {'event' : 'BalancesTransfered', 'state': self.state}
+        named_data = {'event': 'BalancesTransfered', 'state': self.state}
         named_data.update(data)
         self.emit_data('event', named_data)
 
@@ -128,18 +126,19 @@ class BusinessLogic():
             self._logger.info('reading did...')
             r = read_did(self._substrate, self._kp, self._logger)
             if r.is_success:
+                print('value' not in r.triggered_events[0].value['attributes'])
+                print(r.triggered_events[0].value['attributes'])
                 f = r.triggered_events[0].value['attributes']['value']
                 self._logger.info(f'successfully read did: {json.loads(f)}')
         except Exception as err:
             self._logger.error(f'failed to read did: {err}')
 
-        if not r == None and not r.is_success:
+        if r is not None and not r.is_success:
             try:
                 self._logger.info('publishing did...')
                 r = publish_did(self._substrate, self._kp, self._logger)
             except Exception as err:
                 self._logger.error(f'failed to publish did: {err}')
-
 
         subcriber = self._redis.pubsub()
         subcriber.subscribe("in")
@@ -147,7 +146,7 @@ class BusinessLogic():
         while True:
             event_data = subcriber.get_message(True, timeout=30000.0)
 
-            if event_data == None:
+            if event_data is None:
                 continue
             else:
                 event = json.loads(event_data['data'])
@@ -158,26 +157,27 @@ class BusinessLogic():
             if event['event_id'] == 'GetBalance':
                 try:
                     balance = get_station_balance(self._substrate, self._kp, self._logger)
-                    self.emit_data("GetBalanceResponse", {'data': balance, 'success' : True})
+                    self.emit_data("GetBalanceResponse", {'data': balance, 'success': True})
                 except Exception as e:
                     self._logger.error(f'exception happen when acquiring balance: {e}')
-                    self.emit_data("GetBalanceResponse", {'data': 0, 'success' : False})
+                    self.emit_data("GetBalanceResponse", {'data': 0, 'success': False})
 
             if event['event_id'] == 'GetPK':
-                self.emit_data("GetPKResponse", {'data': self._kp.ss58_address, 'success' : True})
+                self.emit_data("GetPKResponse", {'data': self._kp.ss58_address, 'success': True})
 
-            if event['event_id'] == 'PublishDID':
+            if event['event_id'] == 'RePublishDID':
                 try:
-                    receipt = publish_did(self._substrate, self._kp, self._logger)
+                    receipt = republish_did(self._substrate, self._kp, self._logger)
                     if receipt.is_success:
-                        self.emit_data("PublishDIDResponse", {'data': self._kp.ss58_address, 'success' : True})
+                        self.emit_data("RePublishDIDResponse", {'data': self._kp.ss58_address, 'success': True})
                     else:
-                        if not r.error_message == None:
-                            self.emit_data("GetPKResponse", {"message":  receipt.error_message, 'success' : False})
-                        self.emit_data("PublishDIDResponse", {"message": "failed to publish did for unknown reason", 'success' : False})
+                        if r.error_message is not None:
+                            self.emit_data("GetPKResponse", {"message": receipt.error_message, 'success': False})
+                        self.emit_data("RePublishDIDResponse",
+                                       {"message": "failed to publish did for unknown reason", 'success': False})
                 except Exception as err:
                     self._logger.error(f'error during publishing occurred: {err}')
-                    self.emit_data("PublishDIDResponse", {"message": "something unexpected happen", 'success' : False})
+                    self.emit_data("RePublishDIDResponse", {"message": "something unexpected happen", 'success': False})
 
             if event['event_id'] == 'Reconnect':
                 self.reconnect()
@@ -346,10 +346,11 @@ class BusinessLogic():
 
             self.emit_log({'state': self.state, 'data': f'{event["event_id"]}'})
             self._logger.info(f'Event: {event["event_id"]}: {event["attributes"]}')
+
     def reconnect(self):
         try:
             self._substrate.close()
             self._substrate = get_substrate_connection(self._ws_url)
-            self.emit_data('ReconnectResponse' ,{'message': 'Successfully reconnected', 'success' : True})
+            self.emit_data('ReconnectResponse', {'message': 'Successfully reconnected', 'success': True})
         except Exception as err:
-            self.emit_data('ReconnectResponse' ,{'message': f'Reconnection failed: {err}', 'success' : False})
+            self.emit_data('ReconnectResponse', {'message': f'Reconnection failed: {err}', 'success': False})
