@@ -3,7 +3,7 @@ import logging
 import redis
 
 from flask_socketio import SocketIO
-from flask import Flask
+from flask import Flask, render_template
 from flask_cors import CORS
 
 from substrateinterface import Keypair
@@ -17,6 +17,10 @@ def create_app(secret: str, debugging: bool, node_addr: str, kp: Keypair, r: red
     app.config['DEBUG'] = debugging
 
     socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, cors_allowed_origins='*')
+
+    @app.route('/')
+    def index():
+        return render_template('index.html')
 
     @socketio.on('connect')
     def connect():
