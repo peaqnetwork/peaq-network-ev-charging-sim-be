@@ -67,7 +67,7 @@ if __name__ == '__main__':
 
     # Test whether the node ws is available
     try:
-        get_substrate_connection(args.node_ws)
+        get_substrate_connection(args.node_ws).close()
     except ConnectionRefusedError:
         logger.error("⚠️  No target node running")
         sys.exit()

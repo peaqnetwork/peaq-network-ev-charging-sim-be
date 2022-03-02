@@ -14,6 +14,9 @@ class SubstrateMonitor():
         self._substrate = get_substrate_connection(ws_url)
         self._redis = r
 
+    def __del__(self):
+        self._substrate.close()
+
     def subscription_event_handler(self, objs, update_nr, subscription_id):
         for obj in objs:
             event = obj['event'].value
