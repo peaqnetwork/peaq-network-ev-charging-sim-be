@@ -120,6 +120,34 @@ class BusinessLogic():
         named_data.update(data)
         self.emit_data('event', named_data)
 
+    def republish_did(self):
+        did_exist = False
+        try:
+            self._logger.info('reading did...')
+            r = read_did(self._substrate, self._kp, self._logger)
+            if r.is_success and \
+               len([_ for _ in r.triggered_events if _.value['event_id'] == 'AttributeRead']):
+                did_exist = True
+        except Exception as err:
+            self._logger.error(f'failed to read did: {err}')
+
+        try:
+            if did_exist:
+                receipt = republish_did(self._substrate, self._kp, self._logger)
+            else:
+                receipt = publish_did(self._substrate, self._kp, self._logger)
+
+            if receipt.is_success:
+                self.emit_data("RePublishDIDResponse", {'data': self._kp.ss58_address, 'success': True})
+            else:
+                if r.error_message is not None:
+                    self.emit_data("GetPKResponse", {"message": receipt.error_message, 'success': False})
+                self.emit_data("RePublishDIDResponse",
+                               {"message": "failed to publish did for unknown reason", 'success': False})
+        except Exception as err:
+            self._logger.error(f'error during publishing occurred: {err}')
+            self.emit_data("RePublishDIDResponse", {"message": "something unexpected happen", 'success': False})
+
     def start(self):
         r = None
         try:
@@ -165,32 +193,7 @@ class BusinessLogic():
                 self.emit_data("GetPKResponse", {'data': self._kp.ss58_address, 'success': True})
 
             if event['event_id'] == 'RePublishDID':
-                did_exist = False
-                try:
-                    self._logger.info('reading did...')
-                    r = read_did(self._substrate, self._kp, self._logger)
-                    if r.is_success and \
-                       len([_ for _ in r.triggered_events if _.value['event_id'] == 'AttributeRead']):
-                        did_exist = True
-                except Exception as err:
-                    self._logger.error(f'failed to read did: {err}')
-
-                try:
-                    if did_exist:
-                        receipt = republish_did(self._substrate, self._kp, self._logger)
-                    else:
-                        receipt = publish_did(self._substrate, self._kp, self._logger)
-
-                    if receipt.is_success:
-                        self.emit_data("RePublishDIDResponse", {'data': self._kp.ss58_address, 'success': True})
-                    else:
-                        if r.error_message is not None:
-                            self.emit_data("GetPKResponse", {"message": receipt.error_message, 'success': False})
-                        self.emit_data("RePublishDIDResponse",
-                                       {"message": "failed to publish did for unknown reason", 'success': False})
-                except Exception as err:
-                    self._logger.error(f'error during publishing occurred: {err}')
-                    self.emit_data("RePublishDIDResponse", {"message": "something unexpected happen", 'success': False})
+                self.republish_did()
 
             if event['event_id'] == 'Reconnect':
                 self.reconnect()
