@@ -3,15 +3,18 @@ import time
 import os
 
 from logging.handlers import TimedRotatingFileHandler
-from datetime import date
-from threading import Lock, Timer
+from threading import Lock
+import threading
 import datetime
 
 kibi = 1024
 
+
 def init_logger(when='d', maxKB=200, backups=4, path="/peaq/simulator/etc/logs/log", storeFor=5):
     maxBytes = kibi * maxKB
-    file_handler = TimeSizeRotatingFileHandler(filename=path, when=when, maxBytes=maxBytes, backupCount=backups, storeFor=storeFor)
+    file_handler = TimeSizeRotatingFileHandler(
+        path,
+        when=when, maxBytes=maxBytes, backupCount=backups, storeFor=storeFor)
     console_handler = logging.StreamHandler()
 
     formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s : %(message)s')
@@ -28,14 +31,24 @@ def init_logger(when='d', maxKB=200, backups=4, path="/peaq/simulator/etc/logs/l
 
     return logger
 
-class TimeSizeRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
-    def __init__(self, filename, when='d', interval=1, backupCount=4, encoding=None, delay=0, utc=0, maxBytes=1000, storeFor=5):
+
+class TimeSizeRotatingFileHandler(TimedRotatingFileHandler):
+    def __init__(self, filename,
+                 when='d', interval=1, backupCount=4, encoding=None,
+                 delay=0, utc=0, maxBytes=1000, storeFor=5):
         """ This is just a combination of TimeSizeRotatingFileHandler and RotatingFileHandler (adds maxBytes to TimeSizeRotatingFileHandler)  """
-        logging.handlers.TimedRotatingFileHandler.__init__(self, filename, when, interval, backupCount, encoding, delay, utc)
+        super().__init__(filename, when, interval, backupCount, encoding, delay, utc)
+
         self.maxBytes = maxBytes
         self.storeFor = storeFor
         self.mutex = Lock()
         self.deleteOldFiles()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     def shouldRollover(self, record):
         """
@@ -87,16 +100,16 @@ class TimeSizeRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
             timeSuffix = time.strftime(self.suffix, timeTuple)
             dfn = self.baseFilename + "." + timeSuffix
             if self.backupCount > 0:
-                cnt=1
-                dfn2="%s.%03d"%(dfn,cnt)
+                cnt = 1
+                dfn2 = "%s.%03d" % (dfn, cnt)
                 present = self.isDateLogFilesPresent(timeSuffix)
                 if present:
                     while not os.path.exists(dfn2):
-                        dfn2="%s.%03d"%(dfn,cnt)
-                        cnt+=1
+                        dfn2 = "%s.%03d" % (dfn, cnt)
+                        cnt += 1
                 while os.path.exists(dfn2):
-                    dfn2="%s.%03d"%(dfn,cnt)
-                    cnt+=1
+                    dfn2 = "%s.%03d" % (dfn, cnt)
+                    cnt += 1
                 os.rename(self.baseFilename, dfn2)
                 for s in self.getFilesToDelete():
                     if (s == self.baseFilename):
@@ -111,7 +124,7 @@ class TimeSizeRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
             newRolloverAt = self.computeRollover(currentTime)
             while newRolloverAt <= currentTime:
                 newRolloverAt = newRolloverAt + self.interval
-            #If DST changes and midnight or weekly rollover, adjust for this.
+            # If DST changes and midnight or weekly rollover, adjust for this.
             if (self.when == 'MIDNIGHT' or self.when.startswith('W')) and not self.utc:
                 dstAtRollover = time.localtime(newRolloverAt)[-1]
                 if dstNow != dstAtRollover:
@@ -159,14 +172,13 @@ class TimeSizeRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
         Determine if the filenames in the logging directory exceed storage period and if so delete the file.
         """
         with self.mutex:
-            dirName, baseName= os.path.split(self.baseFilename)
+            dirName, baseName = os.path.split(self.baseFilename)
             fileNames = os.listdir(dirName)
             prefix = baseName + "."
-            plen = len(prefix)
             for fileName in fileNames:
-                if (fileName[:plen] == prefix and self.isOld(fileName)):
+                if fileName.startswith(prefix) and self.isOld(fileName):
                     os.remove(os.path.join(dirName, fileName))
-            Timer(10, self.deleteOldFiles).start()
+            threading.Timer(10, self.deleteOldFiles).start()
 
     def isOld(self, fileName: str) -> bool:
         """
@@ -174,21 +186,19 @@ class TimeSizeRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
         Else returns False
         """
         dirName, baseName = os.path.split(self.baseFilename)
-        if (baseName == fileName):
+        if baseName == fileName:
             return False
         filePath = os.path.join(dirName, fileName)
         if not os.path.exists(filePath):
             return False
 
-        today = date.today()
         fileCreationYear = int(fileName[4:8])
         fileCreationMonth = int(fileName[9:11])
         fileCreationDay = int(fileName[12:14])
 
-        start = datetime.datetime(fileCreationYear,fileCreationMonth,fileCreationDay,0,0,0,0)
+        start = datetime.datetime(fileCreationYear, fileCreationMonth, fileCreationDay,
+                                  0, 0, 0, 0)
         end = datetime.datetime.now()
         delta = end - start
 
-        if (delta.days > self.storeFor):
-            return True
-        return False
+        return delta.days > self.storeFor
