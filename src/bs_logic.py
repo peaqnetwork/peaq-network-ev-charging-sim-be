@@ -126,10 +126,9 @@ class BusinessLogic():
             self._logger.info('reading did...')
             r = read_did(self._substrate, self._kp, self._logger)
             if r.is_success:
-                print('value' not in r.triggered_events[0].value['attributes'])
-                print(r.triggered_events[0].value['attributes'])
-                f = r.triggered_events[0].value['attributes']['value']
-                self._logger.info(f'successfully read did: {json.loads(f)}')
+                event = [_.value for _ in r.triggered_events
+                         if _.value['event_id'] == 'AttributeRead'][0]
+                self._logger.info(f'successfully read did: {json.loads(event["attributes"]["value"])}')
         except Exception as err:
             self._logger.error(f'failed to read did: {err}')
 
@@ -166,8 +165,22 @@ class BusinessLogic():
                 self.emit_data("GetPKResponse", {'data': self._kp.ss58_address, 'success': True})
 
             if event['event_id'] == 'RePublishDID':
+                did_exist = False
                 try:
-                    receipt = republish_did(self._substrate, self._kp, self._logger)
+                    self._logger.info('reading did...')
+                    r = read_did(self._substrate, self._kp, self._logger)
+                    if r.is_success and \
+                       len([_ for _ in r.triggered_events if _.value['event_id'] == 'AttributeRead']):
+                        did_exist = True
+                except Exception as err:
+                    self._logger.error(f'failed to read did: {err}')
+
+                try:
+                    if did_exist:
+                        receipt = republish_did(self._substrate, self._kp, self._logger)
+                    else:
+                        receipt = publish_did(self._substrate, self._kp, self._logger)
+
                     if receipt.is_success:
                         self.emit_data("RePublishDIDResponse", {'data': self._kp.ss58_address, 'success': True})
                     else:
