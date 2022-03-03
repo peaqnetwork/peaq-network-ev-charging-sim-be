@@ -124,5 +124,9 @@ if __name__ == '__main__':
     monitor_thread = Thread(target=monitor.run_substrate_monitor)
     monitor_thread.start()
 
-    user_simulation_test(args.node_ws, kp_consumer, kp_provider, kp_sudo, args.deposit_token)
+    try:
+        user_simulation_test(args.node_ws, kp_consumer, kp_provider, kp_sudo, args.deposit_token)
+    except ConnectionRefusedError:
+        logging.error("⚠️  No target node running")
+        sys.exit()
     monitor_thread.join()
