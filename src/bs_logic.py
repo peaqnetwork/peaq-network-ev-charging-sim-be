@@ -46,7 +46,8 @@ class BusinessLogic():
         self.reset()
 
     def __del__(self):
-        self._substrate.close()
+        if self._substrate:
+            self._substrate.close()
 
     def reset(self):
         self._charging_info = {

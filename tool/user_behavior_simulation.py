@@ -57,7 +57,8 @@ class SubstrateMonitor():
         self._substrate = get_substrate_connection(ws_url)
 
     def __del__(self):
-        self._substrate.close()
+        if self._substrate:
+            self._substrate.close()
 
     def subscription_event_handler(self, objs, update_nr, subscription_id):
         for obj in objs:
