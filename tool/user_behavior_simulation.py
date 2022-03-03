@@ -40,14 +40,14 @@ def parse_arguement():
 def user_simulation_test(ws_url: str, kp_consumer: Keypair,
                          kp_provider: Keypair, kp_sudo: Keypair,
                          token_deposit: int):
-    substrate = get_substrate_connection(ws_url)
-    # Fund first
-    fund(substrate, kp_consumer, kp_sudo, 500)
-    fund(substrate, kp_provider, kp_sudo, 500)
+    with get_substrate_connection(ws_url) as substrate:
+        # Fund first
+        fund(substrate, kp_consumer, kp_sudo, 500)
+        fund(substrate, kp_provider, kp_sudo, 500)
 
-    deposit_money_to_multsig_wallet(substrate, kp_consumer, kp_provider, token_deposit)
-    send_service_request(substrate, kp_consumer, kp_provider, token_deposit)
-    logging.info('---- charging start and wait')
+        deposit_money_to_multsig_wallet(substrate, kp_consumer, kp_provider, token_deposit)
+        send_service_request(substrate, kp_consumer, kp_provider, token_deposit)
+        logging.info('---- charging start and wait')
 
 
 class SubstrateMonitor():
@@ -55,6 +55,10 @@ class SubstrateMonitor():
         self._threshold = threshold
         self._kp_consumer = kp_consumer
         self._substrate = get_substrate_connection(ws_url)
+
+    def __del__(self):
+        if self._substrate:
+            self._substrate.close()
 
     def subscription_event_handler(self, objs, update_nr, subscription_id):
         for obj in objs:
@@ -103,7 +107,7 @@ if __name__ == '__main__':
 
     # Test whether the node ws is available
     try:
-        get_substrate_connection(args.node_ws)
+        get_substrate_connection(args.node_ws).close()
     except ConnectionRefusedError:
         logging.error("⚠️  No target node running")
         sys.exit()
@@ -120,5 +124,9 @@ if __name__ == '__main__':
     monitor_thread = Thread(target=monitor.run_substrate_monitor)
     monitor_thread.start()
 
-    user_simulation_test(args.node_ws, kp_consumer, kp_provider, kp_sudo, args.deposit_token)
+    try:
+        user_simulation_test(args.node_ws, kp_consumer, kp_provider, kp_sudo, args.deposit_token)
+    except ConnectionRefusedError:
+        logging.error("⚠️  No target node running")
+        sys.exit()
     monitor_thread.join()
