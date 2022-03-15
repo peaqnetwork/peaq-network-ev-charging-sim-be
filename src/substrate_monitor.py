@@ -22,6 +22,7 @@ class SubstrateMonitor():
         for obj in objs:
             event = obj['event'].value
             data_to_send = {
+                'type': 'chain',
                 'event_id': event['event_id'],
                 'attributes': event['attributes'],
             }

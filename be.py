@@ -26,7 +26,7 @@ RUNTIME_DEFAULT = 'dev'
 def create_main_logic(ws_url: str, socketio: SocketIO, kp_provider: Keypair, r: redis.Redis, logger: logging.Logger):
     monitor_thread = Thread(target=run_substrate_monitor, args=(ws_url, r,))
     business_logic_thread = Thread(target=run_business_logic,
-                                   args=(ws_url, socketio, kp_provider, r, logger,))
+                                   args=(ws_url, kp_provider, r, logger,))
 
     read_redis_thread = Thread(target=app.redis_reader, args=(socketio, r))
 

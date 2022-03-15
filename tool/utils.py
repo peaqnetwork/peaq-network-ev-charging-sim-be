@@ -49,7 +49,7 @@ def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, kp_consumer: 
         call_function='transfer',
         call_params={
             'dest': multi_sig_addr,
-            'value': token_num * TOKEN_NUM_BASE
+            'value': token_num
         })
 
     nonce = substrate.get_account_nonce(kp_consumer.ss58_address)
@@ -73,7 +73,7 @@ def send_service_request(substrate: SubstrateInterface, kp_consumer: Keypair,
         call_function='service_requested',
         call_params={
             'provider': kp_provider.ss58_address,
-            'token_deposited': token_num * TOKEN_NUM_BASE
+            'token_deposited': token_num
         })
 
     extrinsic = substrate.create_signed_extrinsic(
