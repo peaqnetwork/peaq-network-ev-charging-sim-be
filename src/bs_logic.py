@@ -7,9 +7,8 @@ from substrateinterface import Keypair
 from substrateinterface.utils.ss58 import ss58_encode
 import transitions
 from src.utils import calculate_multi_sig, send_token_multisig_wallet
-from src.utils import send_chain_service_deliver
 from src.utils import compose_delivery_info, publish_did, read_did, republish_did, get_station_balance
-from src import utils as AppUtils
+from src import utils as ChainUtils
 from src import p2p_utils as P2PUtils
 from src.charging_utils import calculate_charging_result
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
@@ -24,7 +23,7 @@ class BusinessLogic():
     states = ['idle', 'verified', 'charging', 'charged', 'approving']
 
     def __init__(self, ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger):
-        self._substrate = AppUtils.get_substrate_connection(ws_url)
+        self._substrate = ChainUtils.get_substrate_connection(ws_url)
         self._machine = transitions.Machine(
             model=self,
             states=BusinessLogic.states,
@@ -307,7 +306,7 @@ class BusinessLogic():
                         'consumer_got_call_hash': refund_info['call_hash']
                     })
 
-                    send_chain_service_deliver(
+                    ChainUtils.send_service_deliver(
                         self._substrate, self._kp, self._charging_info['consumer'],
                         compose_delivery_info(refund_token, refund_info),
                         compose_delivery_info(spent_token, spent_info), self._logger)
@@ -389,7 +388,7 @@ class BusinessLogic():
     def reconnect(self):
         try:
             self._substrate.close()
-            self._substrate = AppUtils.get_substrate_connection(self._ws_url)
+            self._substrate = ChainUtils.get_substrate_connection(self._ws_url)
             self.emit_data('ReconnectResponse', {'message': 'Successfully reconnected', 'success': True})
         except Exception as err:
             self.emit_data('ReconnectResponse', {'message': f'Reconnection failed: {err}', 'success': False})

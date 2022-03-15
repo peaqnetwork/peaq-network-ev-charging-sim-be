@@ -147,7 +147,7 @@ def compose_delivery_info(token_num: int, info: dict) -> dict:
     }
 
 
-def send_chain_service_deliver(substrate: SubstrateInterface, kp: Keypair,
+def send_service_deliver(substrate: SubstrateInterface, kp: Keypair,
                                user_addr: str, refund_info: dict, spent_info: dict, logger: logging.Logger):
     nonce = substrate.get_account_nonce(kp.ss58_address)
     call = substrate.compose_call(
