@@ -13,6 +13,7 @@ from substrateinterface import Keypair
 from utils import fund
 import utils as ToolChainUtils
 import src.p2p_utils as P2PUtils
+from src import user_utils as UserUtils
 from utils import deposit_money_to_multsig_wallet
 from utils import approve_token
 from src.utils import parse_config, get_substrate_connection, generate_key_pair_from_mnemonic
@@ -36,11 +37,43 @@ def parse_arguement():
                         type=str, default='tool/sudo.config.yaml')
     parser.add_argument('--node_ws', help="peaq node's url",
                         type=str, default='ws://127.0.0.1:9944')
-    parser.add_argument('--provider_mnemonic', help="will be used only if on preview branch",
+    parser.add_argument('--provider_mnemonic', help='will be used only if on preview branch',
                         type=str, default='ws://127.0.0.1:9944')
     parser.add_argument('--rconfig', help='redis config yaml file',
                         type=str, default='etc/redis.yaml')
     return parser.parse_args()
+
+
+def reconnect(r):
+    m = {
+        'event_id': 'Reconnect',
+    }
+    data_to_send = UserUtils.create_user_request(m)
+    r.publish('in', data_to_send.encode('ascii'))
+
+
+def republish_did(r):
+    m = {
+        'event_id': 'RePublishDID',
+    }
+    data_to_send = UserUtils.create_user_request(m)
+    r.publish('in', data_to_send.encode('ascii'))
+
+
+def get_pk(r):
+    m = {
+        'event_id': 'GetPK',
+    }
+    data_to_send = UserUtils.create_user_request(m)
+    r.publish('in', data_to_send.encode('ascii'))
+
+
+def get_balance(r):
+    m = {
+        'event_id': 'GetBalance',
+    }
+    data_to_send = UserUtils.create_user_request(m)
+    r.publish('in', data_to_send.encode('ascii'))
 
 
 def user_simulation_test(r,
@@ -48,6 +81,11 @@ def user_simulation_test(r,
                          kp_provider: Keypair, kp_sudo: Keypair,
                          token_deposit: int):
     with get_substrate_connection(ws_url) as substrate:
+        reconnect(r)
+        republish_did(r)
+        get_pk(r)
+        get_balance(r)
+
         # Fund first
         fund(substrate, kp_consumer, kp_sudo, 500)
         fund(substrate, kp_provider, kp_sudo, 500)
@@ -73,8 +111,8 @@ class RedisMonitor():
 
     def redis_reader(self):
         subcriber = r.pubsub()
-        subcriber.subscribe("out")
-        # subcriber.subscribe("in")
+        subcriber.subscribe('out')
+        # subcriber.subscribe('in')
 
         while True:
             event_data = subcriber.get_message(True, timeout=30000.0)
@@ -86,18 +124,17 @@ class RedisMonitor():
                 logging.info(f"{event['type']}: {event}")
                 continue
 
-            p2p_msg = P2PUtils.decode_p2p_event(event)
+            p2p_msg = P2PUtils.decode_out_event(event)
 
             if p2p_msg.event_id == P2PMessage.EventType.SERVICE_REQUEST_ACK:
                 time.sleep(10)
                 logging.info('✅ ---- send request !!')
-                data_to_send = {
-                    'type': 'user',
+                m = {
                     'event_id': 'UserChargingStop',
                     'data': True,
-                    'attributes': True,
                 }
-                r.publish("in", json.dumps(data_to_send).encode('ascii'))
+                data_to_send = UserUtils.create_user_request(m)
+                r.publish('in', data_to_send.encode('ascii'))
 
             if p2p_msg.event_id == P2PMessage.EventType.SERVICE_DELIVERED:
                 provider_addr = p2p_msg.service_delivered_data.provider
@@ -145,7 +182,7 @@ class SubstrateMonitor():
             logging.info(f"chain: {event['event_id']}: {event['attributes']}")
 
     def run_substrate_monitor(self):
-        self._substrate.query("System", "Events", None,
+        self._substrate.query('System', 'Events', None,
                               subscription_handler=self.subscription_event_handler)
 
 
@@ -158,7 +195,7 @@ if __name__ == '__main__':
     try:
         get_substrate_connection(args.node_ws).close()
     except ConnectionRefusedError:
-        logging.error("⚠️  No target node running")
+        logging.error('⚠️  No target node running')
         sys.exit()
 
     params = parse_redis_config(args.rconfig)
@@ -182,6 +219,6 @@ if __name__ == '__main__':
     try:
         user_simulation_test(r, args.node_ws, kp_consumer, kp_provider, kp_sudo, args.deposit_token)
     except ConnectionRefusedError:
-        logging.error("⚠️  No target node running")
+        logging.error('⚠️  No target node running')
         sys.exit()
     monitor_thread.join()

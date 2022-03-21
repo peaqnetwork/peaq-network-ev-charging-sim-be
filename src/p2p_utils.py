@@ -3,7 +3,7 @@ from peaq_network_ev_charging_message_format.python import p2p_message_format_pb
 from substrateinterface import Keypair
 
 
-def decode_p2p_event(event: dict) -> P2PMessage.Event:
+def decode_out_event(event: dict) -> P2PMessage.Event:
     p2p_info = P2PMessage.Event()
     p2p_info.ParseFromString(bytes.fromhex(event['data']))
     return p2p_info
@@ -30,10 +30,7 @@ def _create_service_request(ss58_consumer_addr: str, ss58_provider_addr: str, to
 def send_service_request(redis, kp_consumer: Keypair, ss58_provider_addr: str, token_num: int):
     event = _create_service_request(kp_consumer.ss58_address, ss58_provider_addr, token_num)
 
-    redis.publish('in', json.dumps({
-        'type': 'p2p',
-        'data': event.SerializeToString().hex()
-    }).encode('ascii'))
+    redis.publish('in', event.SerializeToString().hex().encode('ascii'))
 
 
 def _create_p2p_request_ack(data_to_send) -> P2PMessage.Event:

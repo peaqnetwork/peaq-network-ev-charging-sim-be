@@ -8,6 +8,7 @@ from flask_cors import CORS
 
 from substrateinterface import Keypair
 import src.p2p_utils as P2PUtils
+import src.user_utils as UserUtils
 
 
 def create_app(secret: str, debugging: bool, node_addr: str, kp: Keypair, r: redis.Redis, logger: logging.Logger) -> (Flask, SocketIO):
@@ -34,13 +35,8 @@ def create_app(secret: str, debugging: bool, node_addr: str, kp: Keypair, r: red
     @socketio.on('json')
     def handle_requests(data):
         m = json.loads(data)
-        data_to_send = {
-            'type': 'user',
-            'event_id': m['type'],
-            'data': m['data'],
-            'attributes': m['data'],
-        }
-        r.publish("in", json.dumps(data_to_send).encode('ascii'))
+        data_to_send = UserUtils.create_user_request(m)
+        r.publish("in", data_to_send.encode('ascii'))
 
     return app, socketio
 
@@ -57,6 +53,6 @@ def redis_reader(sock: SocketIO, r: redis.Redis):
         else:
             m = json.loads(event_data['data'])
             if m['type'] == 'p2p':
-                sock.emit(m['type'], P2PUtils.decode_p2p_event(m))
+                sock.emit(m['type'], P2PUtils.decode_out_event(m))
             else:
                 sock.emit(m['type'], m['data'])

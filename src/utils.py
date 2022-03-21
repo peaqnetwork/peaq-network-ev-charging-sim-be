@@ -2,11 +2,13 @@ import yaml
 import logging
 import re
 import redis
+import json
 
 from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.utils.ss58 import ss58_encode
 from scalecodec.base import RuntimeConfiguration
 from scalecodec.type_registry import load_type_registry_preset
+from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
 
 version = 'v2'
 
@@ -148,7 +150,7 @@ def compose_delivery_info(token_num: int, info: dict) -> dict:
 
 
 def send_service_deliver(substrate: SubstrateInterface, kp: Keypair,
-                               user_addr: str, refund_info: dict, spent_info: dict, logger: logging.Logger):
+                         user_addr: str, refund_info: dict, spent_info: dict, logger: logging.Logger):
     nonce = substrate.get_account_nonce(kp.ss58_address)
     call = substrate.compose_call(
         call_module='Transaction',
@@ -282,3 +284,20 @@ def get_station_balance(substrate: SubstrateInterface, kp: Keypair, logger: logg
     )
 
     return account_info['data']['free'].value
+
+
+def decode_chain_event(event: dict) -> P2PMessage.Event:
+    user_info = P2PMessage.Event()
+    user_info.ParseFromString(bytes.fromhex(event))
+    return user_info
+
+
+def create_chain_event_data(data):
+    event = P2PMessage.Event()
+    event.event_id = P2PMessage.EventType.RECEIVE_CHAIN_EVENT
+    chain_event_data = P2PMessage.ChainEventData()
+    chain_event_data.event_id = data['event_id']
+    chain_event_data.attributes = json.dumps(data['attributes'])
+    event.chain_event_data.CopyFrom(chain_event_data)
+
+    return event.SerializeToString().hex()
