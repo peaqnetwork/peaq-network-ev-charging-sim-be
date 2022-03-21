@@ -3,7 +3,6 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
-import json
 import unittest
 from src.bs_logic import BusinessLogic
 from src.p2p_utils import decode_p2p_event, _create_p2p_request_ack
@@ -35,7 +34,7 @@ class TestBSLogic(unittest.TestCase):
         p2p_info.event_id = P2PMessage.EventType.SERVICE_REQUESTED
         request = P2PMessage.ServiceRequestedData()
         request.provider = kp.ss58_address
-        request.token_deposited = "10"
+        request.token_deposited = '10'
         p2p_info.service_requested_data.CopyFrom(request)
 
         self.assertTrue(bs.is_service_requested_event(p2p_info, kp.ss58_address))
@@ -50,19 +49,19 @@ class TestBSLogic(unittest.TestCase):
         p2p_info.event_id = P2PMessage.EventType.SERVICE_REQUESTED
         request = P2PMessage.ServiceRequestedData()
         request.provider = Keypair.create_from_uri('//Alice').public_key.hex()
-        request.token_deposited = "10"
+        request.token_deposited = '10'
         p2p_info.service_requested_data.CopyFrom(request)
 
         self.assertFalse(bs.is_service_requested_event(p2p_info,
                                                        Keypair.create_from_uri('//QQ').ss58_address))
 
     def test_create_request_ack(self):
-        data = {'yoyo': 'yoyo'}
+        data = 'to the moon'
 
         resp = _create_p2p_request_ack(data)
 
         requested_ack = P2PMessage.ServiceAckData()
-        requested_ack.resp.message = json.dumps(data)
+        requested_ack.resp.message = data
         event_resp = P2PMessage.Event()
         event_resp.service_ack_data.CopyFrom(requested_ack)
         event_resp.event_id = P2PMessage.EventType.SERVICE_REQUEST_ACK

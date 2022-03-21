@@ -38,14 +38,15 @@ def send_service_request(redis, kp_consumer: Keypair, ss58_provider_addr: str, t
 
 def _create_p2p_request_ack(data_to_send) -> P2PMessage.Event:
     requested_ack = P2PMessage.ServiceAckData()
-    requested_ack.resp.message = json.dumps(data_to_send)
+    requested_ack.resp.message = data_to_send
+    requested_ack.resp.error = False
     event_resp = P2PMessage.Event()
     event_resp.service_ack_data.CopyFrom(requested_ack)
     event_resp.event_id = P2PMessage.EventType.SERVICE_REQUEST_ACK
     return event_resp
 
 
-def send_request_ack(redis, data_to_send: dict):
+def send_request_ack(redis, data_to_send: str):
     request_ack = _create_p2p_request_ack(data_to_send)
     redis.publish('out', json.dumps({
         'type': 'p2p',

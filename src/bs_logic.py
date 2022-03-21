@@ -104,7 +104,7 @@ class BusinessLogic():
             'type': data_type,
             'data': raw_data,
         }
-        self._redis.publish("out", json.dumps(data_to_send).encode('ascii'))
+        self._redis.publish('out', json.dumps(data_to_send).encode('ascii'))
         self._logger.info(f'{data_type}: {raw_data}')
 
     def emit_log(self, log_data: dict):
@@ -148,15 +148,15 @@ class BusinessLogic():
                 receipt = publish_did(self._substrate, self._kp, self._logger)
 
             if receipt.is_success:
-                self.emit_data("RePublishDIDResponse", {'data': self._kp.ss58_address, 'success': True})
+                self.emit_data('RePublishDIDResponse', {'data': self._kp.ss58_address, 'success': True})
             else:
                 if r.error_message is not None:
-                    self.emit_data("GetPKResponse", {"message": receipt.error_message, 'success': False})
-                self.emit_data("RePublishDIDResponse",
-                               {"message": "failed to publish did for unknown reason", 'success': False})
+                    self.emit_data('GetPKResponse', {'message': receipt.error_message, 'success': False})
+                self.emit_data('RePublishDIDResponse',
+                               {'message': 'failed to publish did for unknown reason', 'success': False})
         except Exception as err:
             self._logger.error(f'error during publishing occurred: {err}')
-            self.emit_data("RePublishDIDResponse", {"message": "something unexpected happen", 'success': False})
+            self.emit_data('RePublishDIDResponse', {'message': 'something unexpected happen', 'success': False})
 
     def start(self):
         r = None
@@ -178,7 +178,7 @@ class BusinessLogic():
                 self._logger.error(f'failed to publish did: {err}')
 
         subcriber = self._redis.pubsub()
-        subcriber.subscribe("in")
+        subcriber.subscribe('in')
 
         while True:
             event_data = subcriber.get_message(True, timeout=30000.0)
@@ -246,12 +246,12 @@ class BusinessLogic():
                 if event['event_id'] == 'GetBalance':
                     try:
                         balance = get_station_balance(self._substrate, self._kp, self._logger)
-                        self.emit_data("GetBalanceResponse", {'data': balance, 'success': True})
+                        self.emit_data('GetBalanceResponse', {'data': balance, 'success': True})
                     except Exception as e:
                         self._logger.error(f'exception happen when acquiring balance: {e}')
-                        self.emit_data("GetBalanceResponse", {'data': 0, 'success': False})
+                        self.emit_data('GetBalanceResponse', {'data': 0, 'success': False})
                 if event['event_id'] == 'GetPK':
-                    self.emit_data("GetPKResponse", {'data': self._kp.ss58_address, 'success': True})
+                    self.emit_data('GetPKResponse', {'data': self._kp.ss58_address, 'success': True})
                 if event['event_id'] == 'RePublishDID':
                     self.republish_did()
                 if event['event_id'] == 'Reconnect':
@@ -356,10 +356,7 @@ class BusinessLogic():
                         'token_deposited': self._charging_info['deposit_token'],
                     })
                     self.emit_log({'state': self.state, 'data': 'ServiceRequested received'})
-                    P2PUtils.send_request_ack(self._redis, {
-                        'type': "log",
-                        'data': "ServiceRequested received",
-                    })
+                    P2PUtils.send_request_ack(self._redis, 'ServiceRequested received')
 
                     self.check(self._charging_info)
                     if self.is_idle():
