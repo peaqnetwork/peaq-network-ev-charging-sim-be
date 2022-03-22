@@ -47,7 +47,6 @@ def parse_arguement():
     return parser.parse_args()
 
 
-# TODO, Change to the socket io, but not redis
 def reconnect(sio: socketio.Client):
     sio.emit('json', json.dumps({
         'type': 'Reconnect',
@@ -104,15 +103,18 @@ def user_simulation_test(ws_url: str,
 
 
 class RedisMonitor():
-    def __init__(self, r: redis.Redis, ws_url: str, kp_consumer: Keypair, threshold: int):
+    def __init__(self, r: redis.Redis, ws_url: str, be_url: str, kp_consumer: Keypair, threshold: int):
         self._threshold = threshold
         self._kp_consumer = kp_consumer
         self._substrate = get_substrate_connection(ws_url)
+        self._sio = socketio.Client()
+        self._sio.connect(be_url)
         self._r = r
 
     def __del__(self):
         if self._substrate:
             self._substrate.close()
+        self._sio.disconnect()
 
     def redis_reader(self):
         subcriber = r.pubsub()
@@ -126,21 +128,14 @@ class RedisMonitor():
                 continue
 
             event = UserUtils.decode_user_event(event_data['data'].decode('ascii'))
-            socket_type = UserUtils.convert_socket_type(event)
-            if socket_type != 'p2p':
-                logging.info(f"Not p2p: {event}")
-                continue
 
             if event.event_id == P2PMessage.EventType.SERVICE_REQUEST_ACK:
                 time.sleep(10)
                 logging.info('✅ ---- send request !!')
-                # [TODO] Socket send?
-                m = {
+                self._sio.emit('json', json.dumps({
                     'type': 'UserChargingStop',
                     'data': True,
-                }
-                data_to_send = UserUtils.create_user_request(m)
-                r.publish('in', data_to_send.encode('ascii'))
+                }))
 
             if event.event_id == P2PMessage.EventType.SERVICE_DELIVERED:
                 provider_addr = event.service_delivered_data.provider
@@ -166,7 +161,7 @@ class RedisMonitor():
                 approve_token(
                     self._substrate, self._kp_consumer,
                     [provider_addr], self._threshold, refund_info)
-            logging.info(f"p2p: {event.event_id}: {event}")
+            logging.info(f"{event.event_id}: {event}")
 
 
 # Only print
@@ -218,7 +213,7 @@ if __name__ == '__main__':
 
     params = parse_redis_config(args.rconfig)
     r = init_redis(params[0], params[1], params[2])
-    redis_monitor = RedisMonitor(r, args.node_ws, kp_consumer, 2)
+    redis_monitor = RedisMonitor(r, args.node_ws, args.be_url, kp_consumer, 2)
     read_redis_thread = Thread(target=redis_monitor.redis_reader)
     read_redis_thread.start()
 

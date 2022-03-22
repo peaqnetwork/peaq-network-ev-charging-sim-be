@@ -145,9 +145,9 @@ def convert_socket_type(event: P2PMessage.Event):
     if event.event_id == P2PMessage.EventType.STOP_CHARGE_RESPONSE:
         return 'UserChargingStop'
     if event.event_id == P2PMessage.EventType.SERVICE_REQUEST_ACK:
-        return 'p2p'
+        return 'SeviceRequestAck'
     if event.event_id == P2PMessage.EventType.SERVICE_DELIVERED:
-        return 'p2p'
+        return 'ServiceDeliviered'
     if event.event_id == P2PMessage.EventType.CHARGING_STATUS:
-        return 'p2p'
+        return 'ChargingStatus'
     raise IOError(f'Not implemnted {event}')

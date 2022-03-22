@@ -284,6 +284,7 @@ class BusinessLogic():
                     continue
 
                 self.end_charging()
+                P2PUtils.send_stop_charing_ack(self._redis, 'Stop charing received')
                 self._logger.info('ended charging')
                 self.emit_log({
                     'state': self.state,
@@ -378,7 +379,6 @@ class BusinessLogic():
                     'token_deposited': self._charging_info['deposit_token'],
                 })
                 self.emit_log({'state': self.state, 'data': 'ServiceRequested received'})
-                # [TODO]
                 P2PUtils.send_request_ack(self._redis, 'ServiceRequested received')
 
                 self.check(self._charging_info)

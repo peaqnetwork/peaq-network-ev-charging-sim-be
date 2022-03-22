@@ -77,3 +77,18 @@ def send_service_deliver(redis, kp: Keypair, ss58_user_addr: str,
     delivered_data = _create_service_deliver_req(kp, ss58_user_addr, refund_info, spent_info)
 
     redis.publish('out', delivered_data.SerializeToString().hex().encode('ascii'))
+
+
+def _create_stop_charing_ack(data_to_send) -> P2PMessage.Event:
+    stop_charge_data = P2PMessage.StopChargeResponseData()
+    stop_charge_data.resp.message = data_to_send
+    stop_charge_data.resp.error = False
+    event_resp = P2PMessage.Event()
+    event_resp.stop_charge_data.CopyFrom(stop_charge_data)
+    event_resp.event_id = P2PMessage.EventType.STOP_CHARGE_RESPONSE
+    return event_resp
+
+
+def send_stop_charing_ack(redis, data_to_send: str):
+    ack = _create_stop_charing_ack(data_to_send)
+    redis.publish('out', ack.SerializeToString().hex().encode('ascii'))
