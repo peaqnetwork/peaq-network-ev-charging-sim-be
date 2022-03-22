@@ -97,37 +97,39 @@ class BusinessLogic():
         return charging_info['consumer'] == event_sign_pk and \
             charging_info['provider_got_call_hash'] == event_call_hash
 
-    def emit_data(self, data_type: str, log_data: dict):
-        raw_data = json.dumps(log_data)
-        data_to_send = {
-            'type': data_type,
-            'data': raw_data,
-        }
-        self._redis.publish('out', json.dumps(data_to_send).encode('ascii'))
-        self._logger.info(f'{data_type}: {raw_data}')
+    def emit_out(self, data: dict):
+        self._redis.publish('out', data)
+        self._logger.info(f'{data}')
 
     def emit_log(self, log_data: dict):
-        self.emit_data('log', log_data)
+        data_to_send = UserUtils.create_log_data(log_data)
+        self._redis.publish('out', data_to_send)
+        self._logger.info(f'log: {log_data}')
+
+    def emit_event(self, event_data: dict):
+        data_to_send = UserUtils.create_event_data(event_data)
+        self._redis.publish('out', data_to_send)
+        self._logger.info(f'event: {event_data}')
 
     def emit_deposit_verified(self, data: dict):
         named_data = {'event': 'DepositVerified', 'state': self.state}
         named_data.update(data)
-        self.emit_data('event', named_data)
+        self.emit_event(named_data)
 
     def emit_service_requested(self, data: dict):
         named_data = {'event': 'ServiceRequested', 'state': self.state}
         named_data.update(data)
-        self.emit_data('event', named_data)
+        self.emit_event(named_data)
 
     def emit_service_delivered(self, data: dict):
         named_data = {'event': 'ServiceDelivered', 'state': self.state}
         named_data.update(data)
-        self.emit_data('event', named_data)
+        self.emit_event(named_data)
 
     def emit_balances_transferd(self, data: dict):
         named_data = {'event': 'BalancesTransfered', 'state': self.state}
         named_data.update(data)
-        self.emit_data('event', named_data)
+        self.emit_event(named_data)
 
     def republish_did(self):
         did_exist = False
@@ -147,32 +149,31 @@ class BusinessLogic():
                 receipt = publish_did(self._substrate, self._kp, self._logger)
 
             if receipt.is_success:
-                # Need to change
-                event_type, data = UserUtils.create_republish_did_ack(
+                data = UserUtils.create_republish_did_ack(
                     self._kp.ss58_address,
                     True,
                     '')
-                self.emit_data(event_type, data)
+                self.emit_out(data)
             else:
                 if r.error_message is not None:
-                    event_type, data = UserUtils.create_republish_did_ack(
+                    data = UserUtils.create_republish_did_ack(
                         self._kp.ss58_address,
                         False,
                         receipt.error_message)
-                    self.emit_data('GetPKResponse', {'message': receipt.error_message, 'success': False})
+                    self.emit_out(data)
                 else:
-                    event_type, data = UserUtils.create_republish_did_ack(
+                    data = UserUtils.create_republish_did_ack(
                         self._kp.ss58_address,
                         False,
                         'failed to publish did for unknown reason')
-                    self.emit_data(event_type, data)
+                    self.emit_out(data)
         except Exception as err:
             self._logger.error(f'error during publishing occurred: {err}')
-            event_type, data = UserUtils.create_republish_did_ack(
+            data = UserUtils.create_republish_did_ack(
                 self._kp.ss58_address,
                 False,
                 'something unexpected happen')
-            self.emit_data(event_type, data)
+            self.emit_out(data)
 
     def start(self):
         r = None
@@ -202,8 +203,6 @@ class BusinessLogic():
             if event_data is None:
                 continue
 
-            print(event)
-            print(event_data['data'])
             event = ChainUtils.decode_chain_event(event_data['data'].decode('utf-8'))
 
             if event.event_id == P2PMessage.RECEIVE_CHAIN_EVENT:
@@ -265,18 +264,15 @@ class BusinessLogic():
             if event.event_id == P2PMessage.GET_BALANCE:
                 try:
                     balance = get_station_balance(self._substrate, self._kp, self._logger)
-                    # [TODO] Need to change
-                    event_type, data = UserUtils.create_get_balance_ack(str(balance), True)
-                    self.emit_data(event_type, data)
+                    data = UserUtils.create_get_balance_ack(str(balance), True)
+                    self.emit_out(data)
                 except Exception as e:
                     self._logger.error(f'exception happen when acquiring balance: {e}')
-                    # [TODO] Need to change
-                    event_type, data = UserUtils.create_get_balance_ack(str(0), False)
-                    self.emit_data(event_type, data)
+                    data = UserUtils.create_get_balance_ack(str(0), False)
+                    self.emit_out(data)
             if event.event_id == P2PMessage.GET_PK:
-                # [TODO] Need to change
-                event_type, data = UserUtils.create_get_pk_ack(self._kp.ss58_address, True)
-                self.emit_data(event_type, data)
+                data = UserUtils.create_get_pk_ack(self._kp.ss58_address, True)
+                self.emit_out(data)
             if event.event_id == P2PMessage.REPUBLISH_DID:
                 self.republish_did()
             if event.event_id == P2PMessage.RECONNECT:
@@ -359,7 +355,8 @@ class BusinessLogic():
             if self.is_service_requested_event(event,
                                                self._kp.ss58_address):
                 if not self.is_idle():
-                    self._logger.error(f'received "service requested" event while not in state "idle" event: {event["event_id"]}: {event["attributes"]}')
+                    self._logger.error('received "service requested" event while not in state "idle"'
+                                       f'event: {event_id}: {attributes}')
                     continue
 
                 p2p_event = event
@@ -381,6 +378,7 @@ class BusinessLogic():
                     'token_deposited': self._charging_info['deposit_token'],
                 })
                 self.emit_log({'state': self.state, 'data': 'ServiceRequested received'})
+                # [TODO]
                 P2PUtils.send_request_ack(self._redis, 'ServiceRequested received')
 
                 self.check(self._charging_info)
@@ -411,12 +409,12 @@ class BusinessLogic():
         try:
             self._substrate.close()
             self._substrate = ChainUtils.get_substrate_connection(self._ws_url)
-            event_type, data = UserUtils.create_reconnect_ack(
+            data = UserUtils.create_reconnect_ack(
                 'Successfully reconnected',
                 True)
-            self.emit_data(event_type, data)
+            self.emit_out(data)
         except Exception as err:
-            event_type, data = UserUtils.create_reconnect_ack(
+            data = UserUtils.create_reconnect_ack(
                 f'Reconnection failed: {err}',
                 False)
-            self.emit_data(event_type, data)
+            self.emit_out(data)

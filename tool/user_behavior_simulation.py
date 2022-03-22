@@ -1,5 +1,4 @@
 import time
-import json
 from threading import Thread
 import argparse
 import logging
@@ -20,6 +19,8 @@ from src.utils import parse_config, get_substrate_connection, generate_key_pair_
 from src.utils import parse_redis_config, init_redis
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
 import redis
+import socketio
+import json
 
 RUNTIME_ENV = 'RUNTIME_ENV'
 RUNTIME_DEFAULT = 'dev'
@@ -37,6 +38,8 @@ def parse_arguement():
                         type=str, default='tool/sudo.config.yaml')
     parser.add_argument('--node_ws', help="peaq node's url",
                         type=str, default='ws://127.0.0.1:9944')
+    parser.add_argument('--be_url', help="peaq charging simulator BE url",
+                        type=str, default='http://127.0.0.1:25566')
     parser.add_argument('--provider_mnemonic', help='will be used only if on preview branch',
                         type=str, default='ws://127.0.0.1:9944')
     parser.add_argument('--rconfig', help='redis config yaml file',
@@ -44,47 +47,49 @@ def parse_arguement():
     return parser.parse_args()
 
 
-def reconnect(r):
-    m = {
-        'event_id': 'Reconnect',
-    }
-    data_to_send = UserUtils.create_user_request(m)
-    r.publish('in', data_to_send.encode('ascii'))
+# TODO, Change to the socket io, but not redis
+def reconnect(sio: socketio.Client):
+    sio.emit('json', json.dumps({
+        'type': 'Reconnect',
+        'data': '',
+    }))
 
 
-def republish_did(r):
-    m = {
-        'event_id': 'RePublishDID',
-    }
-    data_to_send = UserUtils.create_user_request(m)
-    r.publish('in', data_to_send.encode('ascii'))
+def republish_did(sio: socketio.Client):
+    sio.emit('json', json.dumps({
+        'type': 'RePublishDID',
+        'data': '',
+    }))
 
 
-def get_pk(r):
-    m = {
-        'event_id': 'GetPK',
-    }
-    data_to_send = UserUtils.create_user_request(m)
-    r.publish('in', data_to_send.encode('ascii'))
+def get_pk(sio: socketio.Client):
+    sio.emit('json', json.dumps({
+        'type': 'GetPK',
+        'data': '',
+    }))
 
 
-def get_balance(r):
-    m = {
-        'event_id': 'GetBalance',
-    }
-    data_to_send = UserUtils.create_user_request(m)
-    r.publish('in', data_to_send.encode('ascii'))
+def get_balance(sio: socketio.Client):
+    sio.emit('json', json.dumps({
+        'type': 'GetBalance',
+        'data': '',
+    }))
 
 
-def user_simulation_test(r,
-                         ws_url: str, kp_consumer: Keypair,
-                         kp_provider: Keypair, kp_sudo: Keypair,
+def user_simulation_test(ws_url: str,
+                         be_url: str,
+                         kp_consumer: Keypair,
+                         kp_provider: Keypair,
+                         kp_sudo: Keypair,
                          token_deposit: int):
     with get_substrate_connection(ws_url) as substrate:
-        reconnect(r)
-        republish_did(r)
-        get_pk(r)
-        get_balance(r)
+        sio = socketio.Client()
+        sio.connect(be_url)
+        reconnect(sio)
+        republish_did(sio)
+        get_pk(sio)
+        get_balance(sio)
+        sio.disconnect()
 
         # Fund first
         fund(substrate, kp_consumer, kp_sudo, 500)
@@ -119,40 +124,41 @@ class RedisMonitor():
 
             if not event_data:
                 continue
-            event = json.loads(event_data['data'])
-            if event['type'] != 'p2p':
-                logging.info(f"{event['type']}: {event}")
+
+            event = UserUtils.decode_user_event(event_data['data'].decode('ascii'))
+            socket_type = UserUtils.convert_socket_type(event)
+            if socket_type != 'p2p':
+                logging.info(f"Not p2p: {event}")
                 continue
 
-            p2p_msg = P2PUtils.decode_out_event(event)
-
-            if p2p_msg.event_id == P2PMessage.EventType.SERVICE_REQUEST_ACK:
+            if event.event_id == P2PMessage.EventType.SERVICE_REQUEST_ACK:
                 time.sleep(10)
                 logging.info('✅ ---- send request !!')
+                # [TODO] Socket send?
                 m = {
-                    'event_id': 'UserChargingStop',
+                    'type': 'UserChargingStop',
                     'data': True,
                 }
                 data_to_send = UserUtils.create_user_request(m)
                 r.publish('in', data_to_send.encode('ascii'))
 
-            if p2p_msg.event_id == P2PMessage.EventType.SERVICE_DELIVERED:
-                provider_addr = p2p_msg.service_delivered_data.provider
+            if event.event_id == P2PMessage.EventType.SERVICE_DELIVERED:
+                provider_addr = event.service_delivered_data.provider
                 refund_info = {
-                    'token_num': int(p2p_msg.service_delivered_data.refund_info.token_num),
+                    'token_num': int(event.service_delivered_data.refund_info.token_num),
                     'timepoint': {
-                        'height': p2p_msg.service_delivered_data.refund_info.time_point.height,
-                        'index': p2p_msg.service_delivered_data.refund_info.time_point.index,
+                        'height': event.service_delivered_data.refund_info.time_point.height,
+                        'index': event.service_delivered_data.refund_info.time_point.index,
                     },
-                    'call_hash': p2p_msg.service_delivered_data.refund_info.call_hash
+                    'call_hash': event.service_delivered_data.refund_info.call_hash
                 }
                 spent_info = {
-                    'token_num': int(p2p_msg.service_delivered_data.spent_info.token_num),
+                    'token_num': int(event.service_delivered_data.spent_info.token_num),
                     'timepoint': {
-                        'height': p2p_msg.service_delivered_data.spent_info.time_point.height,
-                        'index': p2p_msg.service_delivered_data.spent_info.time_point.index,
+                        'height': event.service_delivered_data.spent_info.time_point.height,
+                        'index': event.service_delivered_data.spent_info.time_point.index,
                     },
-                    'call_hash': p2p_msg.service_delivered_data.spent_info.call_hash
+                    'call_hash': event.service_delivered_data.spent_info.call_hash
                 }
                 approve_token(
                     self._substrate, self._kp_consumer,
@@ -160,7 +166,7 @@ class RedisMonitor():
                 approve_token(
                     self._substrate, self._kp_consumer,
                     [provider_addr], self._threshold, refund_info)
-            logging.info(f"p2p: {event['type']}: {p2p_msg}")
+            logging.info(f"p2p: {event.event_id}: {event}")
 
 
 # Only print
@@ -198,9 +204,6 @@ if __name__ == '__main__':
         logging.error('⚠️  No target node running')
         sys.exit()
 
-    params = parse_redis_config(args.rconfig)
-    r = init_redis(params[0], params[1], params[2])
-
     kp_sudo = parse_config(args.sudo_config)
     runtime_env = os.getenv(RUNTIME_ENV, RUNTIME_DEFAULT)
     if (runtime_env == RUNTIME_DEFAULT):
@@ -212,12 +215,22 @@ if __name__ == '__main__':
     substrate_monitor = SubstrateMonitor(args.node_ws, kp_consumer, 2)
     monitor_thread = Thread(target=substrate_monitor.run_substrate_monitor)
     monitor_thread.start()
+
+    params = parse_redis_config(args.rconfig)
+    r = init_redis(params[0], params[1], params[2])
     redis_monitor = RedisMonitor(r, args.node_ws, kp_consumer, 2)
     read_redis_thread = Thread(target=redis_monitor.redis_reader)
     read_redis_thread.start()
 
     try:
-        user_simulation_test(r, args.node_ws, kp_consumer, kp_provider, kp_sudo, args.deposit_token)
+        user_simulation_test(
+            args.node_ws,
+            args.be_url,
+            kp_consumer,
+            kp_provider,
+            kp_sudo,
+            args.deposit_token
+        )
     except ConnectionRefusedError:
         logging.error('⚠️  No target node running')
         sys.exit()

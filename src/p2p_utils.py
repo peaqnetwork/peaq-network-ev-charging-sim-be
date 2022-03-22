@@ -1,4 +1,3 @@
-import json
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
 from substrateinterface import Keypair
 
@@ -45,10 +44,7 @@ def _create_p2p_request_ack(data_to_send) -> P2PMessage.Event:
 
 def send_request_ack(redis, data_to_send: str):
     request_ack = _create_p2p_request_ack(data_to_send)
-    redis.publish('out', json.dumps({
-        'type': 'p2p',
-        'data': request_ack.SerializeToString().hex(),
-    }).encode('ascii'))
+    redis.publish('out', request_ack.SerializeToString().hex().encode('ascii'))
 
 
 def _convert_transaction_value(info: dict):
@@ -80,7 +76,4 @@ def send_service_deliver(redis, kp: Keypair, ss58_user_addr: str,
                          refund_info: dict, spent_info: dict):
     delivered_data = _create_service_deliver_req(kp, ss58_user_addr, refund_info, spent_info)
 
-    redis.publish('out', json.dumps({
-        'type': 'p2p',
-        'data': delivered_data.SerializeToString().hex()
-    }).encode('ascii'))
+    redis.publish('out', delivered_data.SerializeToString().hex().encode('ascii'))
