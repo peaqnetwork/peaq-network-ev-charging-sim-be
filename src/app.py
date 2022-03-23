@@ -51,6 +51,6 @@ def redis_reader(sock: SocketIO, r: redis.Redis):
         if not event_data:
             continue
 
-        event = UserUtils.decode_user_event(event_data['data'].decode('ascii'))
+        event = UserUtils.decode_hex_event(event_data['data'].decode('ascii'))
         socket_type = UserUtils.convert_socket_type(event)
         sock.emit(socket_type, MessageToJson(event))

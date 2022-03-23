@@ -5,22 +5,23 @@ sys.path.append(BASE_DIR)
 
 import unittest
 from src.bs_logic import BusinessLogic
-from src.p2p_utils import decode_out_event, _create_p2p_request_ack
+from src.p2p_utils import _create_p2p_request_ack
 from src.p2p_utils import _convert_transaction_value, _create_service_deliver_req
+from src import user_utils as UserUtils
 from unittest import mock
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
 from substrateinterface import Keypair
 
 
 class TestBSLogic(unittest.TestCase):
-    def test_decode_out_event(self):
+    def test_decode_hex_event(self):
         p2p_info = P2PMessage.Event()
         p2p_info.event_id = P2PMessage.EventType.CHARGING_STATUS
         status = P2PMessage.ChargingStatusData()
         status.progress = 17
         p2p_info.charging_status_data.CopyFrom(status)
 
-        p2p_event = decode_out_event({'event_id': 'p2p', 'data': p2p_info.SerializeToString().hex()})
+        p2p_event = UserUtils.decode_hex_event(p2p_info.SerializeToString().hex())
         self.assertEqual(p2p_info, p2p_event)
 
     @mock.patch('src.utils.get_substrate_connection')

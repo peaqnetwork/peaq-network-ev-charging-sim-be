@@ -264,14 +264,14 @@ class BusinessLogic():
             if event.event_id == P2PMessage.GET_BALANCE:
                 try:
                     balance = get_station_balance(self._substrate, self._kp, self._logger)
-                    data = UserUtils.create_get_balance_ack(str(balance), True)
+                    data = UserUtils.create_get_balance_ack(str(balance), True, '')
                     self.emit_out(data)
                 except Exception as e:
                     self._logger.error(f'exception happen when acquiring balance: {e}')
-                    data = UserUtils.create_get_balance_ack(str(0), False)
+                    data = UserUtils.create_get_balance_ack(str(0), False, f'error: {e}')
                     self.emit_out(data)
             if event.event_id == P2PMessage.GET_PK:
-                data = UserUtils.create_get_pk_ack(self._kp.ss58_address, True)
+                data = UserUtils.create_get_pk_ack(self._kp.ss58_address, True, '')
                 self.emit_out(data)
             if event.event_id == P2PMessage.REPUBLISH_DID:
                 self.republish_did()
@@ -411,10 +411,12 @@ class BusinessLogic():
             self._substrate = ChainUtils.get_substrate_connection(self._ws_url)
             data = UserUtils.create_reconnect_ack(
                 'Successfully reconnected',
-                True)
+                True,
+                '')
             self.emit_out(data)
         except Exception as err:
             data = UserUtils.create_reconnect_ack(
-                f'Reconnection failed: {err}',
-                False)
+                '',
+                False,
+                f'Reconnection failed: {err}')
             self.emit_out(data)

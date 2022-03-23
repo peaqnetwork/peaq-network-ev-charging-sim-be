@@ -2,12 +2,6 @@ from peaq_network_ev_charging_message_format.python import p2p_message_format_pb
 from substrateinterface import Keypair
 
 
-def decode_out_event(event: dict) -> P2PMessage.Event:
-    p2p_info = P2PMessage.Event()
-    p2p_info.ParseFromString(bytes.fromhex(event['data']))
-    return p2p_info
-
-
 def is_service_requested_event(p2p_event: P2PMessage.EventType) -> bool:
     if p2p_event.event_id != P2PMessage.EventType.SERVICE_REQUESTED and \
        p2p_event.HasField('service_requested_data'):

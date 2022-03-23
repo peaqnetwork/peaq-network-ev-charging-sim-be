@@ -2,7 +2,7 @@ from peaq_network_ev_charging_message_format.python import p2p_message_format_pb
 import json
 
 
-def decode_user_event(event: dict) -> P2PMessage.Event:
+def decode_hex_event(event: dict) -> P2PMessage.Event:
     user_info = P2PMessage.Event()
     user_info.ParseFromString(bytes.fromhex(event))
     return user_info
@@ -82,46 +82,49 @@ def create_event_data(event_data: dict):
     return event.SerializeToString().hex().encode('ascii')
 
 
-def create_get_pk_ack(addr: str, success: bool):
+def create_get_pk_ack(addr: str, success: bool, fail_msg: str):
     event = P2PMessage.Event()
     event.event_id = P2PMessage.EventType.GET_PK_ACK
     get_pk_ack_data = P2PMessage.GetPKAckData()
     get_pk_ack_data.pk = addr
-    get_pk_ack_data.success = success
+    get_pk_ack_data.resp.error = not success
+    get_pk_ack_data.resp.message = fail_msg
     event.get_pk_ack_data.CopyFrom(get_pk_ack_data)
 
     return event.SerializeToString().hex().encode('ascii')
 
 
-def create_get_balance_ack(balance: str, success: bool):
+def create_get_balance_ack(balance: str, success: bool, fail_msg: str):
     event = P2PMessage.Event()
     event.event_id = P2PMessage.EventType.GET_BALANCE_ACK
     get_balance_ack_data = P2PMessage.GetBalanceAckData()
     get_balance_ack_data.balance = balance
-    get_balance_ack_data.success = success
+    get_balance_ack_data.resp.error = not success
+    get_balance_ack_data.resp.message = fail_msg
     event.get_balance_ack_data.CopyFrom(get_balance_ack_data)
 
     return event.SerializeToString().hex().encode('ascii')
 
 
-def create_republish_did_ack(addr: str, success: bool, message: str):
+def create_republish_did_ack(addr: str, success: bool, fail_msg: str):
     event = P2PMessage.Event()
     event.event_id = P2PMessage.EventType.REPUBLISH_DID_ACK
     republish_ack_data = P2PMessage.RePublishDIDAckData()
     republish_ack_data.resp.error = not success
-    republish_ack_data.resp.message = message
+    republish_ack_data.resp.message = fail_msg
     republish_ack_data.pk = addr
     event.republish_ack_data.CopyFrom(republish_ack_data)
 
     return event.SerializeToString().hex().encode('ascii')
 
 
-def create_reconnect_ack(mesg: str, success: bool):
+def create_reconnect_ack(ok_mesg: str, success: bool, fail_msg: str):
     event = P2PMessage.Event()
     event.event_id = P2PMessage.EventType.RECONNECT_ACK
     reconnect_ack_data = P2PMessage.ReconnectAckData()
-    reconnect_ack_data.data = mesg
-    reconnect_ack_data.success = success
+    reconnect_ack_data.resp.error = not success
+    reconnect_ack_data.resp.message = fail_msg
+    reconnect_ack_data.message = ok_mesg
     event.reconnect_ack_data.CopyFrom(reconnect_ack_data)
 
     return event.SerializeToString().hex().encode('ascii')

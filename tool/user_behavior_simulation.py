@@ -140,7 +140,7 @@ class RedisMonitor():
             if not event_data:
                 continue
 
-            event = UserUtils.decode_user_event(event_data['data'].decode('ascii'))
+            event = UserUtils.decode_hex_event(event_data['data'].decode('ascii'))
 
             if event.event_id == P2PMessage.EventType.SERVICE_REQUEST_ACK:
                 if not self._p2p_flag:
