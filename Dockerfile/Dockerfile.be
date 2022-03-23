@@ -8,8 +8,6 @@ ADD . /peaq/simulator/
 
 WORKDIR /peaq/simulator
 
-RUN pip3 install -r requirements.txt
-
 FROM python:3.9-bullseye
 
 COPY --from=rustcompiler /peaq/simulator /peaq/simulator

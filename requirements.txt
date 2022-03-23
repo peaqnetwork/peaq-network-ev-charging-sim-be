@@ -42,3 +42,4 @@ websocket-client==0.59.0
 Werkzeug==2.0.3
 wrapt==1.13.3
 xxhash==2.0.2
+protobuf==3.19.3

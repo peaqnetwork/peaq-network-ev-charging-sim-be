@@ -104,7 +104,7 @@ def user_simulation_test(ws_url: str,
             P2PUtils.send_service_request(r, kp_consumer, kp_provider.ss58_address, 10)
             logging.info('---- Start charging and wait')
         else:
-            print('⚠️ ⚠️ ⚠️  Please send the service request!!')
+            logging.info('⚠️ ⚠️ ⚠️  Please send the service request!!')
             logging.info('---- Wait for the service request')
 
 
@@ -151,7 +151,7 @@ class RedisMonitor():
                         'data': True,
                     }))
                 else:
-                    print('⚠️ ⚠️ ⚠️  Please send the charging stop!!')
+                    logging.info('⚠️ ⚠️ ⚠️  Please send the charging stop!!')
 
             if event.event_id == P2PMessage.EventType.SERVICE_DELIVERED:
                 provider_addr = event.service_delivered_data.provider

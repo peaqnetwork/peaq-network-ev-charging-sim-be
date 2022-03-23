@@ -39,26 +39,33 @@ BE: 192.168.178.22
 User simulator tool: 192.168.178.22
 ```
 #### Steps
-a. Run the peaq node on the remote server
+On the remote server:
+a. Run the peaq node
 ```
 cd ~/peaq-network-node
 Cargo run -- --dev --tmp --ws-external
 ```
-b. Run the redis server on the remote server
+b. Run the redis server
 ``` 
 docker run --network=host redis:latest
 ```
-c. Change the redis setting on the etc/redis.yaml on local server
+On the local server:
+a. Change the redis setting on the etc/redis.yaml
 ```
 host: "192.168.178.23"
 ```
-d. Run the charging simulator's backend service on local server
+b. Run the charging simulator's backend service
 ```
-python3 be.py --node_ws ws://192.168.178.23:9944
+git submodule init
+git submodule update
+
+docker build -t be_be -f Dockerfile/Dockerfile.be .
+docker run --network=host be_be
 ```
-e. Run the user simulator tool on local server
+c. Run the user simulator tool
 ```
-python3 tool/user_behavior_simulation.py --node_ws ws://192.168.178.23:9944
+docker build -t be_user -f Dockerfile/Dockerfile.user .
+docker run -it --rm --network=host be_user -ode_ws wss://wss.test.peaq.network
 ```
 
 2. Run the user simulator tools with P2P feature
@@ -91,7 +98,8 @@ docker run --network=host redis:latest
 c. Run the p2p service
 ```
 cd peaq-network-ev-charging-sim-be-p2p
-go run ./cmd -p 10333 -sk 71b28bbd45fe04f07200190180f14ba0fe3dd903eb70b6a34ee16f9f463cfd10
+docker build -t p2p_node .
+docker run -it --rm --network=host p2p_node -p 10333 -sk 71b28bbd45fe04f07200190180f14ba0fe3dd903eb70b6a34ee16f9f463cfd10
 ```
 On local server:
 a. Change the redis setting on the etc/redis.yaml
@@ -100,16 +108,28 @@ host: "192.168.178.23"
 ```
 b. Run the charging simulator's backend service
 ```
-python3 be.py --node_ws ws://192.168.178.23:9944
+git submodule init
+git submodule update
+
+docker build -t be_be -f Dockerfile/Dockerfile.be .
+docker run --network=host be_be
 ```
 c. Run the peaq-network-ev-charging-sim-iface
 ```
 cd peaq-network-ev-charging-sim-iface
-cargo run -- /ip4/192.168.178.23/tcp/10333
+
+docker build -t sim-iface .
+docker run -it --rm --network=host sim-iface /ip4/127.0.0.1/tcp/10333
+
+or 
+
+Follow the build script for building the peaq-node, then
+docker run --rm -it -v $(pwd):/sources rust-stable:ubuntu-20.04 cargo run  --release --manifest-path=/sources/Cargo.toml -- /ip4/192.168.178.23/tcp/10333
 ```
 d. Run the user simulator tool
 ```
-python3 tool/user_behavior_simulation.py --node_ws ws://192.168.178.23:9944 --p2p
+docker build -t be_user -f Dockerfile/Dockerfile.user .
+docker run -it --rm --network=host be_user -ode_ws wss://wss.test.peaq.network --p2p
 ```
 e. Send the service request from the P2P client (peaq-network-ev-charging-sim-iface).
 You should enter `ServiceRequested` on the peaq-network-ev-charging-sim-iface command line tool via the standand input.
