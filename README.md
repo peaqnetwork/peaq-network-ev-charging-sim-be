@@ -25,7 +25,8 @@ python3 be.py
 ## MVPv2
 ### How to test
 There are two ways to test the charging simulator
-1. Run the user simulator tools directly
+
+#### Run the user simulator tools directly
 In this test, the user simulator tool sends/receives the message on the Redis instead of communicating with the P2P node.
 #### Environment
 Remote environment
@@ -40,21 +41,22 @@ User simulator tool: 192.168.178.22
 ```
 #### Steps
 On the remote server:
-a. Run the peaq node
+1. Run the peaq node
 ```
 cd ~/peaq-network-node
 Cargo run -- --dev --tmp --ws-external
 ```
-b. Run the redis server
+2. Run the redis server
 ``` 
 docker run --network=host redis:latest
 ```
 On the local server:
-a. Change the redis setting on the etc/redis.yaml
+
+1. Change the redis setting on the etc/redis.yaml
 ```
 host: "192.168.178.23"
 ```
-b. Run the charging simulator's backend service
+2. Run the charging simulator's backend service
 ```
 git submodule init
 git submodule update
@@ -62,15 +64,18 @@ git submodule update
 docker build -t be_be -f Dockerfile/Dockerfile.be .
 docker run --network=host be_be
 ```
-c. Run the user simulator tool
+3. Run the user simulator tool
 ```
 docker build -t be_user -f Dockerfile/Dockerfile.user .
-docker run -it --rm --network=host be_user -ode_ws wss://wss.test.peaq.network
+docker run -it --rm --network=host be_user --node_ws wss://wss.test.peaq.network
 ```
 
-2. Run the user simulator tools with P2P feature
+
+#### Run the user simulator tools with P2P feature
 In this test, we'll use the `peaq-network-ev-charging-sim-iface` and `peaq-network-ev-charging-sim-be-p2p` for the p2p communication.
-#### Environment
+
+
+##### Environment
 Remote environment
 ```
 Peaq-node: 192.168.178.23:9944
@@ -84,29 +89,31 @@ BE: 192.168.178.22
 User simulator tool: 192.168.178.22
 peaq-network-ev-charging-sim-iface: 192.168.178.22
 ```
-#### Steps
+##### Steps
 On remote server:
-a. Run the peaq node
+
+1. Run the peaq node
 ```
 cd ~/peaq-network-node
 Cargo run -- --dev --tmp --ws-external
 ```
-b. Run the redis server
+2. Run the redis server
 ``` 
 docker run --network=host redis:latest
 ```
-c. Run the p2p service
+3. Run the p2p service
 ```
 cd peaq-network-ev-charging-sim-be-p2p
 docker build -t p2p_node .
 docker run -it --rm --network=host p2p_node -p 10333 -sk 71b28bbd45fe04f07200190180f14ba0fe3dd903eb70b6a34ee16f9f463cfd10
 ```
+
 On local server:
-a. Change the redis setting on the etc/redis.yaml
+1. Change the redis setting on the etc/redis.yaml
 ```
 host: "192.168.178.23"
 ```
-b. Run the charging simulator's backend service
+2. Run the charging simulator's backend service
 ```
 git submodule init
 git submodule update
@@ -114,7 +121,7 @@ git submodule update
 docker build -t be_be -f Dockerfile/Dockerfile.be .
 docker run --network=host be_be
 ```
-c. Run the peaq-network-ev-charging-sim-iface
+3. Run the peaq-network-ev-charging-sim-iface
 ```
 cd peaq-network-ev-charging-sim-iface
 
@@ -126,12 +133,12 @@ or
 Follow the build script for building the peaq-node, then
 docker run --rm -it -v $(pwd):/sources rust-stable:ubuntu-20.04 cargo run  --release --manifest-path=/sources/Cargo.toml -- /ip4/192.168.178.23/tcp/10333
 ```
-d. Run the user simulator tool
+4. Run the user simulator tool
 ```
 docker build -t be_user -f Dockerfile/Dockerfile.user .
-docker run -it --rm --network=host be_user -ode_ws wss://wss.test.peaq.network --p2p
+docker run -it --rm --network=host be_user --node_ws wss://wss.test.peaq.network --p2p
 ```
-e. Send the service request from the P2P client (peaq-network-ev-charging-sim-iface).
+5. Send the service request from the P2P client (peaq-network-ev-charging-sim-iface).
 You should enter `ServiceRequested` on the peaq-network-ev-charging-sim-iface command line tool via the standand input.
-f. Send the charging finish from the P2P client (peaq-network-ev-charging-sim-iface)
+6. Send the charging finish from the P2P client (peaq-network-ev-charging-sim-iface)
 You should enter `StopCharging` on the peaq-network-ev-charging-sim-iface command line tool via the standand input.
