@@ -44,6 +44,8 @@ def parse_arguement():
                         type=str, default='ws://127.0.0.1:9944')
     parser.add_argument('--rconfig', help='redis config yaml file',
                         type=str, default='etc/redis.yaml')
+    parser.add_argument('--p2p', help='wait for p2p client request',
+                        action='store_true')
     return parser.parse_args()
 
 
@@ -77,6 +79,7 @@ def get_balance(sio: socketio.Client):
 
 def user_simulation_test(ws_url: str,
                          be_url: str,
+                         p2p_flag: bool,
                          kp_consumer: Keypair,
                          kp_provider: Keypair,
                          kp_sudo: Keypair,
@@ -96,20 +99,30 @@ def user_simulation_test(ws_url: str,
 
         token_num = token_deposit * ToolChainUtils.TOKEN_NUM_BASE
         deposit_money_to_multsig_wallet(substrate, kp_consumer, kp_provider, token_num)
-        ToolChainUtils.send_service_request(substrate, kp_consumer, kp_provider, token_num)
-
-    P2PUtils.send_service_request(r, kp_consumer, kp_provider.ss58_address, 10)
-    logging.info('---- charging start and wait')
+        if not p2p_flag:
+            ToolChainUtils.send_service_request(substrate, kp_consumer, kp_provider, token_num)
+            P2PUtils.send_service_request(r, kp_consumer, kp_provider.ss58_address, 10)
+            logging.info('---- Start charging and wait')
+        else:
+            print('⚠️ ⚠️ ⚠️  Please send the service request!!')
+            logging.info('---- Wait for the service request')
 
 
 class RedisMonitor():
-    def __init__(self, r: redis.Redis, ws_url: str, be_url: str, kp_consumer: Keypair, threshold: int):
+    def __init__(self,
+                 r: redis.Redis,
+                 ws_url: str,
+                 be_url: str,
+                 p2p_flag: bool,
+                 kp_consumer: Keypair,
+                 threshold: int):
         self._threshold = threshold
         self._kp_consumer = kp_consumer
         self._substrate = get_substrate_connection(ws_url)
         self._sio = socketio.Client()
         self._sio.connect(be_url)
         self._r = r
+        self._p2p_flag = p2p_flag
 
     def __del__(self):
         if self._substrate:
@@ -130,12 +143,15 @@ class RedisMonitor():
             event = UserUtils.decode_user_event(event_data['data'].decode('ascii'))
 
             if event.event_id == P2PMessage.EventType.SERVICE_REQUEST_ACK:
-                time.sleep(10)
-                logging.info('✅ ---- send request !!')
-                self._sio.emit('json', json.dumps({
-                    'type': 'UserChargingStop',
-                    'data': True,
-                }))
+                if not self._p2p_flag:
+                    time.sleep(10)
+                    logging.info('✅ ---- send request !!')
+                    self._sio.emit('json', json.dumps({
+                        'type': 'UserChargingStop',
+                        'data': True,
+                    }))
+                else:
+                    print('⚠️ ⚠️ ⚠️  Please send the charging stop!!')
 
             if event.event_id == P2PMessage.EventType.SERVICE_DELIVERED:
                 provider_addr = event.service_delivered_data.provider
@@ -213,7 +229,7 @@ if __name__ == '__main__':
 
     params = parse_redis_config(args.rconfig)
     r = init_redis(params[0], params[1], params[2])
-    redis_monitor = RedisMonitor(r, args.node_ws, args.be_url, kp_consumer, 2)
+    redis_monitor = RedisMonitor(r, args.node_ws, args.be_url, args.p2p, kp_consumer, 2)
     read_redis_thread = Thread(target=redis_monitor.redis_reader)
     read_redis_thread.start()
 
@@ -221,6 +237,7 @@ if __name__ == '__main__':
         user_simulation_test(
             args.node_ws,
             args.be_url,
+            args.p2p,
             kp_consumer,
             kp_provider,
             kp_sudo,
