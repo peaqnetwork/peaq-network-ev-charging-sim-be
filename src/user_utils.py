@@ -39,9 +39,9 @@ def _create_reconnect():
 def _create_stop_user_charging(data):
     event = P2PMessage.Event()
     event.event_id = P2PMessage.EventType.STOP_CHARGE
-    stop_charging_data = P2PMessage.StopChargingData()
-    stop_charging_data.success = data['data']
-    event.stop_charging_data.CopyFrom(stop_charging_data)
+    stop_charge_data = P2PMessage.StopChargeData()
+    stop_charge_data.success = data['data']
+    event.stop_charge_data.CopyFrom(stop_charge_data)
 
     return event.SerializeToString().hex()
 

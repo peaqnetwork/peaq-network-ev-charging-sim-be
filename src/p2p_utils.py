@@ -80,11 +80,11 @@ def send_service_deliver(redis, kp: Keypair, ss58_user_addr: str,
 
 
 def _create_stop_charing_ack(data_to_send) -> P2PMessage.Event:
-    stop_charge_data = P2PMessage.StopChargeResponseData()
-    stop_charge_data.resp.message = data_to_send
-    stop_charge_data.resp.error = False
+    stop_charge_resp_data = P2PMessage.StopChargeResponseData()
+    stop_charge_resp_data.resp.message = data_to_send
+    stop_charge_resp_data.resp.error = False
     event_resp = P2PMessage.Event()
-    event_resp.stop_charge_data.CopyFrom(stop_charge_data)
+    event_resp.stop_charge_resp_data.CopyFrom(stop_charge_resp_data)
     event_resp.event_id = P2PMessage.EventType.STOP_CHARGE_RESPONSE
     return event_resp
 

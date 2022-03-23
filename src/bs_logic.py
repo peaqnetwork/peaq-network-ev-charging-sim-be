@@ -280,7 +280,7 @@ class BusinessLogic():
             if event.event_id == P2PMessage.STOP_CHARGE:
                 if not self.is_charging():
                     self._logger.error('received "finished charging" event while not in state "charging"'
-                                       f'event: {event.stop_charging_data.success}')
+                                       f'event: {event.stop_charge_data.success}')
                     continue
 
                 self.end_charging()
@@ -289,7 +289,7 @@ class BusinessLogic():
                 self.emit_log({
                     'state': self.state,
                     'data': 'Charging end',
-                    'info': event.stop_charging_data.success
+                    'info': event.stop_charge_data.success
                 })
 
                 self._charging_info['charging_end_time'] = datetime.datetime.now()
