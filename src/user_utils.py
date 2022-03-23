@@ -108,10 +108,9 @@ def create_republish_did_ack(addr: str, success: bool, message: str):
     event = P2PMessage.Event()
     event.event_id = P2PMessage.EventType.REPUBLISH_DID_ACK
     republish_ack_data = P2PMessage.RePublishDIDAckData()
-    # [TODO]
-    republish_ack_data.data = message
-    republish_ack_data.data = addr
-    republish_ack_data.success = success
+    republish_ack_data.resp.error = not success
+    republish_ack_data.resp.message = message
+    republish_ack_data.pk = addr
     event.republish_ack_data.CopyFrom(republish_ack_data)
 
     return event.SerializeToString().hex().encode('ascii')
