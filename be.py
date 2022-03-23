@@ -10,7 +10,7 @@ from substrateinterface import Keypair
 from src import app
 from src.bs_logic import run_business_logic
 from src.substrate_monitor import run_substrate_monitor
-from src.utils import get_substrate_connection, parse_config, parse_logger_config, generate_key_pair, parse_redis_config, init_redis
+from src.chain_utils import get_substrate_connection, parse_config, parse_logger_config, generate_key_pair, parse_redis_config, init_redis
 from flask_socketio import SocketIO
 from src.logger import init_logger
 

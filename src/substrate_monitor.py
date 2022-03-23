@@ -1,7 +1,6 @@
 import redis
 
-from src.utils import get_substrate_connection
-from src import utils as ChainUtils
+from src import chain_utils as ChainUtils
 
 
 def run_substrate_monitor(ws_url: str, r: redis.Redis):
@@ -11,7 +10,7 @@ def run_substrate_monitor(ws_url: str, r: redis.Redis):
 
 class SubstrateMonitor():
     def __init__(self, ws_url: str, r: redis.Redis):
-        self._substrate = get_substrate_connection(ws_url)
+        self._substrate = ChainUtils.get_substrate_connection(ws_url)
         self._redis = r
 
     def __del__(self):

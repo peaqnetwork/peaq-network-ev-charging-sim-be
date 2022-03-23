@@ -9,14 +9,14 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
 from substrateinterface import Keypair
-from utils import fund
-import utils as ToolChainUtils
 import src.p2p_utils as P2PUtils
-from src import user_utils as UserUtils
-from utils import deposit_money_to_multsig_wallet
-from utils import approve_token
-from src.utils import parse_config, get_substrate_connection, generate_key_pair_from_mnemonic
-from src.utils import parse_redis_config, init_redis
+import src.user_utils as UserUtils
+
+from src.chain_utils import parse_config, get_substrate_connection, generate_key_pair_from_mnemonic
+from src.chain_utils import parse_redis_config, init_redis
+
+import utils as ToolUtils
+
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
 import redis
 import socketio
@@ -94,13 +94,13 @@ def user_simulation_test(ws_url: str,
         sio.disconnect()
 
         # Fund first
-        fund(substrate, kp_consumer, kp_sudo, 500)
-        fund(substrate, kp_provider, kp_sudo, 500)
+        ToolUtils.fund(substrate, kp_consumer, kp_sudo, 500)
+        ToolUtils.fund(substrate, kp_provider, kp_sudo, 500)
 
-        token_num = token_deposit * ToolChainUtils.TOKEN_NUM_BASE
-        deposit_money_to_multsig_wallet(substrate, kp_consumer, kp_provider, token_num)
+        token_num = token_deposit * ToolUtils.TOKEN_NUM_BASE
+        ToolUtils.deposit_money_to_multsig_wallet(substrate, kp_consumer, kp_provider, token_num)
         if not p2p_flag:
-            ToolChainUtils.send_service_request(substrate, kp_consumer, kp_provider, token_num)
+            ToolUtils.send_service_request(substrate, kp_consumer, kp_provider, token_num)
             P2PUtils.send_service_request(r, kp_consumer, kp_provider.ss58_address, 10)
             logging.info('---- Start charging and wait')
         else:
@@ -171,10 +171,10 @@ class RedisMonitor():
                     },
                     'call_hash': event.service_delivered_data.spent_info.call_hash
                 }
-                approve_token(
+                ToolUtils.approve_token(
                     self._substrate, self._kp_consumer,
                     [provider_addr], self._threshold, spent_info)
-                approve_token(
+                ToolUtils.approve_token(
                     self._substrate, self._kp_consumer,
                     [provider_addr], self._threshold, refund_info)
             logging.info(f"{event.event_id}: {event}")

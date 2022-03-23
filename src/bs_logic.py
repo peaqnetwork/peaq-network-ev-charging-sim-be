@@ -6,12 +6,12 @@ import redis
 from substrateinterface import Keypair
 from substrateinterface.utils.ss58 import ss58_encode
 import transitions
-from src.utils import calculate_multi_sig, send_token_multisig_wallet
-from src.utils import compose_delivery_info, publish_did, read_did, republish_did, get_station_balance
-from src import utils as ChainUtils
+from src.chain_utils import calculate_multi_sig, send_token_multisig_wallet
+from src.chain_utils import compose_delivery_info, publish_did, read_did, republish_did, get_station_balance
+from src import chain_utils as ChainUtils
 from src import p2p_utils as P2PUtils
 from src import user_utils as UserUtils
-from src.charging_utils import calculate_charging_result
+from src import charging_utils as CharginUtils
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
 
 
@@ -293,7 +293,7 @@ class BusinessLogic():
                 })
 
                 self._charging_info['charging_end_time'] = datetime.datetime.now()
-                charging_result = calculate_charging_result(
+                charging_result = CharginUtils.calculate_charging_result(
                     self._charging_info['charging_start_time'],
                     self._charging_info['charging_end_time'],
                     self._charging_info['deposit_token']
