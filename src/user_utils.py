@@ -86,7 +86,7 @@ def create_get_pk_ack(addr: str, success: bool):
     event = P2PMessage.Event()
     event.event_id = P2PMessage.EventType.GET_PK_ACK
     get_pk_ack_data = P2PMessage.GetPKAckData()
-    get_pk_ack_data.data = addr
+    get_pk_ack_data.pk = addr
     get_pk_ack_data.success = success
     event.get_pk_ack_data.CopyFrom(get_pk_ack_data)
 
@@ -97,7 +97,7 @@ def create_get_balance_ack(balance: str, success: bool):
     event = P2PMessage.Event()
     event.event_id = P2PMessage.EventType.GET_BALANCE_ACK
     get_balance_ack_data = P2PMessage.GetBalanceAckData()
-    get_balance_ack_data.data = balance
+    get_balance_ack_data.balance = balance
     get_balance_ack_data.success = success
     event.get_balance_ack_data.CopyFrom(get_balance_ack_data)
 
@@ -134,20 +134,6 @@ def convert_socket_type(event: P2PMessage.Event):
             return 'log'
         if event.emit_show_info_data.type == P2PMessage.EmitShowInfoData.ShowInfoType.EVENT_INFO:
             return 'event'
-    if event.event_id == P2PMessage.EventType.GET_BALANCE_ACK:
-        return 'GetBalanceResponse'
-    if event.event_id == P2PMessage.EventType.GET_PK_ACK:
-        return 'GetPKResponse'
-    if event.event_id == P2PMessage.EventType.REPUBLISH_DID_ACK:
-        return 'RePublishDIDResponse'
-    if event.event_id == P2PMessage.EventType.RECONNECT_ACK:
-        return 'ReconnectResponse'
-    if event.event_id == P2PMessage.EventType.STOP_CHARGE_RESPONSE:
-        return 'UserChargingStop'
-    if event.event_id == P2PMessage.EventType.SERVICE_REQUEST_ACK:
-        return 'SeviceRequestAck'
-    if event.event_id == P2PMessage.EventType.SERVICE_DELIVERED:
-        return 'ServiceDeliviered'
-    if event.event_id == P2PMessage.EventType.CHARGING_STATUS:
-        return 'ChargingStatus'
+    else:
+        return 'misc'
     raise IOError(f'Not implemnted {event}')
