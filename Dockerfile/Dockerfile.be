@@ -18,4 +18,5 @@ RUN pip3 install -r requirements.txt
 
 EXPOSE 25566
 
-CMD [ "python3", "/peaq/simulator/be.py", "--node_ws", "wss://wss.test.peaq.network", "--url", "0.0.0.0"]
+ENTRYPOINT [ "python3", "/peaq/simulator/be.py" ]
+CMD [ "--node_ws", "wss://wss.test.peaq.network", "--url", "0.0.0.0"]
