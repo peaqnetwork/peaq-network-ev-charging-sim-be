@@ -126,7 +126,7 @@ docker run --network=host be_be
 cd peaq-network-ev-charging-sim-iface
 
 docker build -t sim-iface .
-docker run -it --rm --network=host sim-iface /ip4/127.0.0.1/tcp/10333
+docker run -it --rm --network=host sim-iface /ip4/192.168.178.23/tcp/10333
 
 or 
 
