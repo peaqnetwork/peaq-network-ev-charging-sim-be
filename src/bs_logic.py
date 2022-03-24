@@ -13,6 +13,7 @@ from src import p2p_utils as P2PUtils
 from src import user_utils as UserUtils
 from src import charging_utils as CharginUtils
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
+from src.constants import REDIS_OUT, REDIS_IN
 
 
 def run_business_logic(ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger):
@@ -98,17 +99,17 @@ class BusinessLogic():
             charging_info['provider_got_call_hash'] == event_call_hash
 
     def emit_out(self, data: dict):
-        self._redis.publish('out', data)
+        self._redis.publish(REDIS_OUT, data)
         self._logger.info(f'{data}')
 
     def emit_log(self, log_data: dict):
         data_to_send = UserUtils.create_log_data(log_data)
-        self._redis.publish('out', data_to_send)
+        self._redis.publish(REDIS_OUT, data_to_send)
         self._logger.info(f'log: {log_data}')
 
     def emit_event(self, event_data: dict):
         data_to_send = UserUtils.create_event_data(event_data)
-        self._redis.publish('out', data_to_send)
+        self._redis.publish(REDIS_OUT, data_to_send)
         self._logger.info(f'event: {event_data}')
 
     def emit_deposit_verified(self, data: dict):
@@ -195,7 +196,7 @@ class BusinessLogic():
                 self._logger.error(f'failed to publish did: {err}')
 
         subcriber = self._redis.pubsub()
-        subcriber.subscribe('in')
+        subcriber.subscribe(REDIS_IN)
 
         while True:
             event_data = subcriber.get_message(True, timeout=30000.0)

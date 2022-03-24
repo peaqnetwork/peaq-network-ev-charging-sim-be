@@ -1,6 +1,7 @@
 import redis
 
 from src import chain_utils as ChainUtils
+from src.constants import REDIS_IN
 
 
 def run_substrate_monitor(ws_url: str, r: redis.Redis):
@@ -25,7 +26,7 @@ class SubstrateMonitor():
                 continue
 
             data_to_send = ChainUtils.create_chain_event_data(event)
-            self._redis.publish("in", data_to_send.encode('ascii'))
+            self._redis.publish(REDIS_IN, data_to_send.encode('ascii'))
 
     def register_monitor_event(self):
         self._substrate.query('System', 'Events',

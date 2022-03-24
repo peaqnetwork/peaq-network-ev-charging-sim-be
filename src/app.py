@@ -9,6 +9,7 @@ from flask_cors import CORS
 from substrateinterface import Keypair
 import src.user_utils as UserUtils
 from google.protobuf.json_format import MessageToJson
+from src.constants import REDIS_IN, REDIS_OUT
 
 
 def create_app(secret: str, debugging: bool, node_addr: str, kp: Keypair, r: redis.Redis, logger: logging.Logger) -> (Flask, SocketIO):
@@ -36,14 +37,14 @@ def create_app(secret: str, debugging: bool, node_addr: str, kp: Keypair, r: red
     def handle_requests(data):
         m = json.loads(data)
         data_to_send = UserUtils.create_user_request(m)
-        r.publish("in", data_to_send.encode('ascii'))
+        r.publish(REDIS_IN, data_to_send.encode('ascii'))
 
     return app, socketio
 
 
 def redis_reader(sock: SocketIO, r: redis.Redis):
     subcriber = r.pubsub()
-    subcriber.subscribe("out")
+    subcriber.subscribe(REDIS_OUT)
 
     while True:
         event_data = subcriber.get_message(True, timeout=30000.0)

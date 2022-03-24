@@ -14,6 +14,7 @@ import src.user_utils as UserUtils
 
 from src.chain_utils import parse_config, get_substrate_connection, generate_key_pair_from_mnemonic
 from src.chain_utils import parse_redis_config, init_redis
+from src.constants import REDIS_OUT
 
 import utils as ToolUtils
 
@@ -131,8 +132,8 @@ class RedisMonitor():
 
     def redis_reader(self):
         subcriber = r.pubsub()
-        subcriber.subscribe('out')
-        # subcriber.subscribe('in')
+        subcriber.subscribe(REDIS_OUT)
+        # subcriber.subscribe(REDIS_IN)
 
         while True:
             event_data = subcriber.get_message(True, timeout=30000.0)
