@@ -61,12 +61,12 @@ host: "192.168.178.23"
 git submodule init
 git submodule update
 
-docker build -t be_be -f Dockerfile/Dockerfile.be .
+docker build -t be_be -f Dockerfile .
 docker run --network=host be_be
 ```
 3. Run the user simulator tool
 ```
-docker build -t be_user -f Dockerfile/Dockerfile.user .
+docker build -t be_user -f tool/Dockerfile.user .
 docker run -it --rm --network=host be_user --node_ws wss://wss.test.peaq.network
 ```
 
@@ -118,7 +118,7 @@ host: "192.168.178.23"
 git submodule init
 git submodule update
 
-docker build -t be_be -f Dockerfile/Dockerfile.be .
+docker build -t be_be -f Dockerfile .
 docker run --network=host be_be
 ```
 3. Run the peaq-network-ev-charging-sim-iface
@@ -135,7 +135,7 @@ docker run --rm -it -v $(pwd):/sources rust-stable:ubuntu-20.04 cargo run  --rel
 ```
 4. Run the user simulator tool
 ```
-docker build -t be_user -f Dockerfile/Dockerfile.user .
+docker build -t be_user -f tool/Dockerfile.user .
 docker run -it --rm --network=host be_user --node_ws wss://wss.test.peaq.network --p2p
 ```
 5. Send the service request from the P2P client (peaq-network-ev-charging-sim-iface).
