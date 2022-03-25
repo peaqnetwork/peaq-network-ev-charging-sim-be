@@ -13,6 +13,7 @@ from src.substrate_monitor import run_substrate_monitor
 from src.chain_utils import get_substrate_connection, parse_config, parse_logger_config, generate_key_pair, parse_redis_config, init_redis
 from flask_socketio import SocketIO
 from src.logger import init_logger
+from src import thread_utils
 
 eventlet.monkey_patch()
 
@@ -24,6 +25,8 @@ RUNTIME_DEFAULT = 'dev'
 
 
 def create_main_logic(ws_url: str, socketio: SocketIO, kp_provider: Keypair, r: redis.Redis, logger: logging.Logger):
+    thread_utils.install(logger)
+
     monitor_thread = Thread(target=run_substrate_monitor, args=(ws_url, r,))
     business_logic_thread = Thread(target=run_business_logic,
                                    args=(ws_url, kp_provider, r, logger,))
