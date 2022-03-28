@@ -15,6 +15,8 @@ COPY --from=rustcompiler /usr/local/lib/python3.9/dist-packages/ /usr/local/lib/
 
 WORKDIR /peaq/simulator
 RUN pip3 install -r requirements.txt
+RUN set -ex && \
+    git submodule init && git submodule update
 
 EXPOSE 25566
 
