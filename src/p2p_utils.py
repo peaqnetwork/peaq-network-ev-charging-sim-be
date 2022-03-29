@@ -87,3 +87,25 @@ def _create_stop_charing_ack(data_to_send) -> P2PMessage.Event:
 def send_stop_charing_ack(redis, data_to_send: str):
     ack = _create_stop_charing_ack(data_to_send)
     redis.publish(REDIS_OUT, ack.SerializeToString().hex().encode('ascii'))
+
+
+def create_server_charging_status():
+    event = P2PMessage.Event()
+    event.event_id = P2PMessage.EventType.CHARGING_STATUS
+
+    return event.SerializeToString().hex()
+
+
+def _create_client_charging_status(progress: float):
+    event = P2PMessage.Event()
+    event.event_id = P2PMessage.EventType.CHARGING_STATUS
+    charging_status_data = P2PMessage.ChargingStatusData()
+    charging_status_data.progress = progress
+    event.charging_status_data.CopyFrom(charging_status_data)
+
+    return event.SerializeToString().hex()
+
+
+def send_client_charging_status(redis, progress: float):
+    event = _create_client_charging_status(progress)
+    redis.publish(REDIS_OUT, event.encode('ascii'))

@@ -127,6 +127,11 @@ class BusinessLogic():
         named_data.update(data)
         self.emit_event(named_data)
 
+    def emit_client_charging_status(self, data: dict):
+        named_data = {'event': 'ChargingStatus', 'state': self.state}
+        named_data.update(data)
+        self.emit_event(named_data)
+
     def emit_balances_transferd(self, data: dict):
         named_data = {'event': 'BalancesTransfered', 'state': self.state}
         named_data.update(data)
@@ -375,6 +380,25 @@ class BusinessLogic():
             self.start_charging()
             self._logger.info('started charging')
             self.emit_log({'state': self.state, 'data': 'Charging start'})
+        if event.event_id == P2PMessage.EventType.CHARGING_STATUS:
+            now_time = datetime.datetime.now()
+            charging_result = CharginUtils.calculate_charging_result(
+                self._charging_info['charging_start_time'],
+                now_time,
+                self._charging_info['deposit_token']
+            )
+            charging_status_data = {
+                'charging_period': str(charging_result['charging_period']),
+                'energy_consumption': charging_result['energy_consumption'],
+                'spent_token': charging_result['spent_token'],
+            }
+            self.emit_client_charging_status(charging_status_data)
+            self.emit_log({
+                'state': self.state,
+                'data': f'Charging status: {charging_status_data}'
+            })
+            P2PUtils.send_client_charging_status(self._redis, float(charging_status_data['energy_consumption']))
+
         self._logger.info(f'Event: {event}')
 
     def start(self):

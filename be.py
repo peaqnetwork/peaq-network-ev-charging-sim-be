@@ -14,6 +14,7 @@ from src.chain_utils import get_substrate_connection, parse_config, parse_logger
 from flask_socketio import SocketIO
 from src.logger import init_logger
 from src import thread_utils
+from src import charging_status_monitor
 
 eventlet.monkey_patch()
 
@@ -30,16 +31,19 @@ def create_main_logic(ws_url: str, socketio: SocketIO, kp_provider: Keypair, r: 
     monitor_thread = Thread(target=run_substrate_monitor, args=(ws_url, r,))
     business_logic_thread = Thread(target=run_business_logic,
                                    args=(ws_url, kp_provider, r, logger,))
-
     read_redis_thread = Thread(target=app.redis_reader, args=(socketio, r))
+    charging_monitor_thread = Thread(target=charging_status_monitor.run,
+                                     args=(r, logger))
 
     monitor_thread.start()
     business_logic_thread.start()
     read_redis_thread.start()
+    charging_monitor_thread.start()
 
     monitor_thread.join()
     business_logic_thread.join()
     read_redis_thread.join()
+    charging_monitor_thread.join()
 
 
 def parse_arguement():
