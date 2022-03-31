@@ -5,7 +5,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
 from substrateinterface import SubstrateInterface, Keypair
-from src import utils
+from src import chain_utils as ChainUtils
 
 TOKEN_NUM_BASE = 10 ** 19
 
@@ -35,7 +35,7 @@ def fund(substrate: SubstrateInterface, kp_dst: Keypair, kp_sudo: Keypair, token
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    utils.show_extrinsic(receipt, 'fund', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'fund', logging.getLogger('logger'))
 
 
 def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, kp_consumer: Keypair,
@@ -43,13 +43,13 @@ def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, kp_consumer: 
     logging.info('----- Consumer deposit money to multisig wallet')
     threshold = 2
     signators = [kp_consumer.ss58_address, kp_provider.ss58_address]
-    multi_sig_addr = utils.calculate_multi_sig(signators, threshold)
+    multi_sig_addr = ChainUtils.calculate_multi_sig(signators, threshold)
     call = substrate.compose_call(
         call_module='Balances',
         call_function='transfer',
         call_params={
             'dest': multi_sig_addr,
-            'value': token_num * TOKEN_NUM_BASE
+            'value': token_num
         })
 
     nonce = substrate.get_account_nonce(kp_consumer.ss58_address)
@@ -61,7 +61,7 @@ def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, kp_consumer: 
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    utils.show_extrinsic(receipt, 'transfer', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'transfer', logging.getLogger('logger'))
 
 
 def send_service_request(substrate: SubstrateInterface, kp_consumer: Keypair,
@@ -73,7 +73,7 @@ def send_service_request(substrate: SubstrateInterface, kp_consumer: Keypair,
         call_function='service_requested',
         call_params={
             'provider': kp_provider.ss58_address,
-            'token_deposited': token_num * TOKEN_NUM_BASE
+            'token_deposited': token_num
         })
 
     extrinsic = substrate.create_signed_extrinsic(
@@ -84,7 +84,7 @@ def send_service_request(substrate: SubstrateInterface, kp_consumer: Keypair,
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    utils.show_extrinsic(receipt, 'service_requested', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'service_requested', logging.getLogger('logger'))
 
 
 def send_spent_token_from_multisig_wallet(
@@ -122,7 +122,7 @@ def send_spent_token_from_multisig_wallet(
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    utils.show_extrinsic(receipt, 'as_multi', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'as_multi', logging.getLogger('logger'))
     info = receipt.get_extrinsic_identifier().split('-')
     return {
         'tx_hash': receipt.extrinsic_hash,
@@ -165,7 +165,7 @@ def send_refund_token_from_multisig_wallet(
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    utils.show_extrinsic(receipt, 'as_multi', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'as_multi', logging.getLogger('logger'))
     info = receipt.get_extrinsic_identifier().split('-')
     return {
         'tx_hash': receipt.extrinsic_hash,
@@ -197,4 +197,4 @@ def approve_token(substrate: SubstrateInterface, kp_sign: Keypair,
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    utils.show_extrinsic(receipt, 'approve_as_multi', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'approve_as_multi', logging.getLogger('logger'))

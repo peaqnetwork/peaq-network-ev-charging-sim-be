@@ -1,7 +1,7 @@
 import redis
-import json
 
-from src.utils import get_substrate_connection
+from src import chain_utils as ChainUtils
+from src.constants import REDIS_IN
 
 
 def run_substrate_monitor(ws_url: str, r: redis.Redis):
@@ -11,7 +11,7 @@ def run_substrate_monitor(ws_url: str, r: redis.Redis):
 
 class SubstrateMonitor():
     def __init__(self, ws_url: str, r: redis.Redis):
-        self._substrate = get_substrate_connection(ws_url)
+        self._substrate = ChainUtils.get_substrate_connection(ws_url)
         self._redis = r
 
     def __del__(self):
@@ -19,13 +19,14 @@ class SubstrateMonitor():
             self._substrate.close()
 
     def subscription_event_handler(self, objs, update_nr, subscription_id):
+        filter_list = ['ExtrinsicSuccess', 'NewBaseFeePerGas']
         for obj in objs:
             event = obj['event'].value
-            data_to_send = {
-                'event_id': event['event_id'],
-                'attributes': event['attributes'],
-            }
-            self._redis.publish("in", json.dumps(data_to_send).encode('ascii'))
+            if event['event_id'] in filter_list:
+                continue
+
+            data_to_send = ChainUtils.create_chain_event_data(event)
+            self._redis.publish(REDIS_IN, data_to_send.encode('ascii'))
 
     def register_monitor_event(self):
         self._substrate.query('System', 'Events',

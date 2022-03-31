@@ -1,0 +1,2 @@
+REDIS_IN = 'IN'
+REDIS_OUT = 'OUT'

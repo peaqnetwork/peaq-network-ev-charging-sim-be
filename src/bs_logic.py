@@ -6,21 +6,26 @@ import redis
 from substrateinterface import Keypair
 from substrateinterface.utils.ss58 import ss58_encode
 import transitions
-from src.utils import calculate_multi_sig, get_substrate_connection, send_token_multisig_wallet, send_service_deliver
-from src.utils import compose_delivery_info, publish_did, read_did, republish_did, get_station_balance
-from src.charging_utils import calculate_charging_result
+from src.chain_utils import calculate_multi_sig, send_token_multisig_wallet
+from src.chain_utils import compose_delivery_info, publish_did, read_did, republish_did, get_station_balance
+from src import chain_utils as ChainUtils
+from src import p2p_utils as P2PUtils
+from src import user_utils as UserUtils
+from src import charging_utils as CharginUtils
+from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
+from src.constants import REDIS_OUT, REDIS_IN
 
 
-def run_business_logic(ws_url: str, socketio, kp: Keypair, r: redis.Redis, logger: logging.Logger):
-    business_logic = BusinessLogic(ws_url, socketio, kp, r, logger)
+def run_business_logic(ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger):
+    business_logic = BusinessLogic(ws_url, kp, r, logger)
     business_logic.start()
 
 
 class BusinessLogic():
     states = ['idle', 'verified', 'charging', 'charged', 'approving']
 
-    def __init__(self, ws_url: str, socketio, kp: Keypair, r: redis.Redis, logger: logging.Logger):
-        self._substrate = get_substrate_connection(ws_url)
+    def __init__(self, ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger):
+        self._substrate = ChainUtils.get_substrate_connection(ws_url)
         self._machine = transitions.Machine(
             model=self,
             states=BusinessLogic.states,
@@ -69,60 +74,63 @@ class BusinessLogic():
         result = self._substrate.query('System', 'Account', [data['multisig_pk']])
         return result['data']['free'] >= data['deposit_token']
 
-    def is_finish_charging(self, event: dict) -> bool:
-        return event['event_id'] == 'UserChargingStop'
+    def is_service_requested_event(self, p2p_event: P2PMessage.Event, interested_addr: str) -> bool:
+        return P2PUtils.is_service_requested_event(p2p_event) and \
+            p2p_event.service_requested_data.provider == interested_addr
 
-    def is_service_requested_event(self, event: dict, interested_addr: str) -> bool:
-        return event['event_id'] == 'ServiceRequested' and \
-            ss58_encode(event['attributes'][1]) == interested_addr
-
-    def is_consumer_refund_approve_event(self, event: dict, charging_info: str) -> bool:
-        if event['event_id'] != 'MultisigExecuted':
+    def is_consumer_refund_approve_event(self, event: P2PMessage.Event, charging_info: str) -> bool:
+        if event.event_id != P2PMessage.RECEIVE_CHAIN_EVENT or \
+           event.chain_event_data.event_id != 'MultisigExecuted':
             return False
-        event_sign_pk = ss58_encode(event['attributes'][0])
-        event_call_hash = event['attributes'][-2]
+        attributes = json.loads(event.chain_event_data.attributes)
+        event_sign_pk = ss58_encode(attributes[0])
+        event_call_hash = attributes[-2]
         return charging_info['consumer'] == event_sign_pk and \
             charging_info['consumer_got_call_hash'] == event_call_hash
 
-    def is_consumer_spent_approve_event(self, event: dict, charging_info: dict) -> bool:
-        if event['event_id'] != 'MultisigExecuted':
+    def is_consumer_spent_approve_event(self, event: P2PMessage.Event, charging_info: dict) -> bool:
+        if event.event_id != P2PMessage.RECEIVE_CHAIN_EVENT or \
+           event.chain_event_data.event_id != 'MultisigExecuted':
             return False
-        event_sign_pk = ss58_encode(event['attributes'][0])
-        event_call_hash = event['attributes'][-2]
+        attributes = json.loads(event.chain_event_data.attributes)
+        event_sign_pk = ss58_encode(attributes[0])
+        event_call_hash = attributes[-2]
         return charging_info['consumer'] == event_sign_pk and \
             charging_info['provider_got_call_hash'] == event_call_hash
 
-    def emit_data(self, data_type: str, log_data: dict):
-        raw_data = json.dumps(log_data)
-        data_to_send = {
-            'type': data_type,
-            'data': raw_data,
-        }
-        self._redis.publish("out", json.dumps(data_to_send).encode('ascii'))
-        self._logger.info(f'{data_type}: {raw_data}')
+    def emit_out(self, data: dict):
+        self._redis.publish(REDIS_OUT, data)
+        self._logger.info(f'{data}')
 
     def emit_log(self, log_data: dict):
-        self.emit_data('log', log_data)
+        data_to_send = UserUtils.create_log_data(log_data)
+        self._redis.publish(REDIS_OUT, data_to_send)
+        self._logger.info(f'log: {log_data}')
+
+    def emit_event(self, event_data: dict):
+        data_to_send = UserUtils.create_event_data(event_data)
+        self._redis.publish(REDIS_OUT, data_to_send)
+        self._logger.info(f'event: {event_data}')
 
     def emit_deposit_verified(self, data: dict):
         named_data = {'event': 'DepositVerified', 'state': self.state}
         named_data.update(data)
-        self.emit_data('event', named_data)
+        self.emit_event(named_data)
 
     def emit_service_requested(self, data: dict):
         named_data = {'event': 'ServiceRequested', 'state': self.state}
         named_data.update(data)
-        self.emit_data('event', named_data)
+        self.emit_event(named_data)
 
     def emit_service_delivered(self, data: dict):
         named_data = {'event': 'ServiceDelivered', 'state': self.state}
         named_data.update(data)
-        self.emit_data('event', named_data)
+        self.emit_event(named_data)
 
     def emit_balances_transferd(self, data: dict):
         named_data = {'event': 'BalancesTransfered', 'state': self.state}
         named_data.update(data)
-        self.emit_data('event', named_data)
+        self.emit_event(named_data)
 
     def republish_did(self):
         did_exist = False
@@ -142,15 +150,31 @@ class BusinessLogic():
                 receipt = publish_did(self._substrate, self._kp, self._logger)
 
             if receipt.is_success:
-                self.emit_data("RePublishDIDResponse", {'data': self._kp.ss58_address, 'success': True})
+                data = UserUtils.create_republish_did_ack(
+                    self._kp.ss58_address,
+                    True,
+                    '')
+                self.emit_out(data)
             else:
                 if r.error_message is not None:
-                    self.emit_data("GetPKResponse", {"message": receipt.error_message, 'success': False})
-                self.emit_data("RePublishDIDResponse",
-                               {"message": "failed to publish did for unknown reason", 'success': False})
+                    data = UserUtils.create_republish_did_ack(
+                        self._kp.ss58_address,
+                        False,
+                        receipt.error_message)
+                    self.emit_out(data)
+                else:
+                    data = UserUtils.create_republish_did_ack(
+                        self._kp.ss58_address,
+                        False,
+                        'failed to publish did for unknown reason')
+                    self.emit_out(data)
         except Exception as err:
             self._logger.error(f'error during publishing occurred: {err}')
-            self.emit_data("RePublishDIDResponse", {"message": "something unexpected happen", 'success': False})
+            data = UserUtils.create_republish_did_ack(
+                self._kp.ss58_address,
+                False,
+                'something unexpected happen')
+            self.emit_out(data)
 
     def start(self):
         r = None
@@ -172,97 +196,105 @@ class BusinessLogic():
                 self._logger.error(f'failed to publish did: {err}')
 
         subcriber = self._redis.pubsub()
-        subcriber.subscribe("in")
+        subcriber.subscribe(REDIS_IN)
 
         while True:
             event_data = subcriber.get_message(True, timeout=30000.0)
 
             if event_data is None:
                 continue
-            else:
-                event = json.loads(event_data['data'])
 
-            if event['event_id'] == 'ExtrinsicSuccess' or event['event_id'] == 'NewBaseFeePerGas':
+            event = ChainUtils.decode_chain_event(event_data['data'].decode('utf-8'))
+
+            if event.event_id == P2PMessage.RECEIVE_CHAIN_EVENT:
+                event_id = event.chain_event_data.event_id
+                attributes = json.loads(event.chain_event_data.attributes)
+                if self.is_consumer_refund_approve_event(event, self._charging_info):
+                    if not self.is_approving():
+                        self._logger.error(f'received "approve refund event" event while not in state "approving" '
+                                           f' event: {event_id}: {attributes}')
+                        continue
+
+                    if 'Ok' not in attributes[-1]:
+                        self.emit_log({
+                            'desc': 'the consumer refund approval has an error, please check',
+                            'time_point': attributes[1],
+                            'error': attributes[-1]
+                        })
+                        continue
+                    self._charging_info['consumer_got'] = True
+                    self.emit_balances_transferd({
+                        'from': self._charging_info['multisig_pk'],
+                        'to': self._charging_info['consumer'],
+                        'value': self._charging_info['refund_token'],
+                    })
+                    self.emit_log({'state': self.state, 'data': 'receive multisig -> conumser, approval'})
+
+                    if self.is_all_approvals():
+                        self.receive_approvals()
+                        self.emit_log({'state': self.state, 'data': 'charging process finish!'})
+
+                if self.is_consumer_spent_approve_event(event, self._charging_info):
+                    if not self.is_approving():
+                        self._logger.error(f'received "consumer spent event" event while not in state "approving" '
+                                           f'event: {event_id}: {attributes}')
+                        continue
+
+                    if 'Ok' not in attributes[-1]:
+                        self.emit_log({
+                            'desc': 'the consumer spent approval has an error, please check',
+                            'time_point': attributes[1],
+                            'error': attributes[-1]
+                        })
+                        continue
+                    self._charging_info['provider_got'] = True
+                    self.emit_balances_transferd({
+                        'from': self._charging_info['multisig_pk'],
+                        'to': self._kp.ss58_address,
+                        'value': self._charging_info['spent_token'],
+                    })
+                    self.emit_log({'state': self.state, 'data': 'receive multisig -> provider, approval'})
+
+                    if self.is_all_approvals():
+                        self.receive_approvals()
+                        self.emit_log({'state': self.state, 'data': 'charging process finish!'})
+                self.emit_log({'state': self.state, 'data': f'{event_id}'})
+                self._logger.info(f'Event: {event_id}: {attributes}')
                 continue
 
-            if event['event_id'] == 'GetBalance':
+            if event.event_id == P2PMessage.GET_BALANCE:
                 try:
                     balance = get_station_balance(self._substrate, self._kp, self._logger)
-                    self.emit_data("GetBalanceResponse", {'data': balance, 'success': True})
+                    data = UserUtils.create_get_balance_ack(str(balance), True, '')
+                    self.emit_out(data)
                 except Exception as e:
                     self._logger.error(f'exception happen when acquiring balance: {e}')
-                    self.emit_data("GetBalanceResponse", {'data': 0, 'success': False})
-
-            if event['event_id'] == 'GetPK':
-                self.emit_data("GetPKResponse", {'data': self._kp.ss58_address, 'success': True})
-
-            if event['event_id'] == 'RePublishDID':
+                    data = UserUtils.create_get_balance_ack(str(0), False, f'error: {e}')
+                    self.emit_out(data)
+            if event.event_id == P2PMessage.GET_PK:
+                data = UserUtils.create_get_pk_ack(self._kp.ss58_address, True, '')
+                self.emit_out(data)
+            if event.event_id == P2PMessage.REPUBLISH_DID:
                 self.republish_did()
-
-            if event['event_id'] == 'Reconnect':
+            if event.event_id == P2PMessage.RECONNECT:
                 self.reconnect()
-
-            if self.is_service_requested_event(event, self._kp.ss58_address):
-                if not self.is_idle():
-                    self._logger.error(f'received "service requested" event while not in state "idle" event: {event["event_id"]}: {event["attributes"]}')
-                    continue
-
-                consumer = ss58_encode(event['attributes'][0])
-                self._charging_info.update({
-                    'consumer': consumer,
-                    'deposit_token': event['attributes'][2],
-                    'multisig_pk': calculate_multi_sig(
-                        [consumer, self._kp.ss58_address],
-                        self._multi_threshold),
-                })
-
-                # [TODO] We should change the API type and the naming...
-                self.emit_service_requested({
-                    'provider': self._kp.ss58_address,
-                    'consumer': self._charging_info['consumer'],
-                    'token_deposited': self._charging_info['deposit_token'],
-                })
-                self.emit_log({'state': self.state, 'data': 'ServiceRequested received'})
-                data_to_send = {
-                    'type': "log",
-                    'data': "ServiceRequested received",
-                }
-                self._redis.publish("out", json.dumps(data_to_send).encode('ascii'))
-
-                self.check(self._charging_info)
-                if self.is_idle():
-                    self.emit_log({'state': self.state, 'data': 'Check refuse'})
-                    # [TODO] We should change the API type and the naming...
-                    self.emit_deposit_verified({
-                        'consumer': self._charging_info['consumer'],
-                        'token_deposited': self._charging_info['deposit_token'],
-                        'success': False,
-                    })
-                    continue
-                # [TODO] We should change the API type and the naming...
-                self.emit_deposit_verified({
-                    'consumer': self._charging_info['consumer'],
-                    'token_deposited': self._charging_info['deposit_token'],
-                    'success': True,
-                })
-                self.emit_log({'state': self.state, 'data': 'Check verified'})
-
-                self._charging_info['charging_start_time'] = datetime.datetime.now()
-                self.start_charging()
-                self._logger.info('started charging')
-                self.emit_log({'state': self.state, 'data': 'Charging start'})
-
-            elif self.is_finish_charging(event):
+            if event.event_id == P2PMessage.STOP_CHARGE:
                 if not self.is_charging():
-                    self._logger.error(f'received "finished charging" event while not in state "charging" event: {event["event_id"]}: {event["data"]}')
+                    self._logger.error('received "finished charging" event while not in state "charging"'
+                                       f'event: {event.stop_charge_data.success}')
                     continue
 
                 self.end_charging()
+                P2PUtils.send_stop_charing_ack(self._redis, 'Stop charing received')
                 self._logger.info('ended charging')
-                self.emit_log({'state': self.state, 'data': 'Charging end', 'info': event['data']})
+                self.emit_log({
+                    'state': self.state,
+                    'data': 'Charging end',
+                    'info': event.stop_charge_data.success
+                })
 
                 self._charging_info['charging_end_time'] = datetime.datetime.now()
-                charging_result = calculate_charging_result(
+                charging_result = CharginUtils.calculate_charging_result(
                     self._charging_info['charging_start_time'],
                     self._charging_info['charging_end_time'],
                     self._charging_info['deposit_token']
@@ -302,10 +334,16 @@ class BusinessLogic():
                     'consumer_got_call_hash': refund_info['call_hash']
                 })
 
-                send_service_deliver(
+                ChainUtils.send_service_deliver(
                     self._substrate, self._kp, self._charging_info['consumer'],
                     compose_delivery_info(refund_token, refund_info),
                     compose_delivery_info(spent_token, spent_info), self._logger)
+
+                P2PUtils.send_service_deliver(
+                    self._redis, self._kp, self._charging_info['consumer'],
+                    compose_delivery_info(refund_token, refund_info),
+                    compose_delivery_info(spent_token, spent_info))
+
                 self.emit_service_delivered({
                     'provider': self._kp.ss58_address,
                     'consumer': self._charging_info['consumer'],
@@ -316,61 +354,70 @@ class BusinessLogic():
                 self.wait_approval()
                 self.emit_log({'state': self.state, 'data': 'User\'s approval wait'})
 
-            elif self.is_consumer_refund_approve_event(event, self._charging_info):
-                if not self.is_approving():
-                    self._logger.error(f'received "approve refund event" event while not in state "approving" event: {event["event_id"]}: {event["attributes"]}')
+            if self.is_service_requested_event(event,
+                                               self._kp.ss58_address):
+                if not self.is_idle():
+                    self._logger.error('received "service requested" event while not in state "idle"'
+                                       f'event: {event_id}: {attributes}')
                     continue
 
-                if 'Ok' not in event['attributes'][-1]:
-                    self.emit_log({
-                        'desc': 'the consumer refund approval has an error, please check',
-                        'time_point': event['attributes'][1],
-                        'error': event['attributes'][-1]
+                p2p_event = event
+                consumer = p2p_event.service_requested_data.consumer
+                deposit_token = int(p2p_event.service_requested_data.token_deposited)
+
+                self._charging_info.update({
+                    'consumer': consumer,
+                    'deposit_token': deposit_token,
+                    'multisig_pk': calculate_multi_sig(
+                        [consumer, self._kp.ss58_address],
+                        self._multi_threshold),
+                })
+
+                # [TODO] We should change the API type and the naming...
+                self.emit_service_requested({
+                    'provider': self._kp.ss58_address,
+                    'consumer': self._charging_info['consumer'],
+                    'token_deposited': self._charging_info['deposit_token'],
+                })
+                self.emit_log({'state': self.state, 'data': 'ServiceRequested received'})
+                P2PUtils.send_request_ack(self._redis, 'ServiceRequested received')
+
+                self.check(self._charging_info)
+                if self.is_idle():
+                    self.emit_log({'state': self.state, 'data': 'Check refuse'})
+                    # [TODO] We should change the API type and the naming...
+                    self.emit_deposit_verified({
+                        'consumer': self._charging_info['consumer'],
+                        'token_deposited': self._charging_info['deposit_token'],
+                        'success': False,
                     })
                     continue
-                self._charging_info['consumer_got'] = True
-                self.emit_balances_transferd({
-                    'from': self._charging_info['multisig_pk'],
-                    'to': self._charging_info['consumer'],
-                    'value': self._charging_info['refund_token'],
+                # [TODO] We should change the API type and the naming...
+                self.emit_deposit_verified({
+                    'consumer': self._charging_info['consumer'],
+                    'token_deposited': self._charging_info['deposit_token'],
+                    'success': True,
                 })
-                self.emit_log({'state': self.state, 'data': 'receive multisig -> conumser, approval'})
+                self.emit_log({'state': self.state, 'data': 'Check verified'})
 
-                if self.is_all_approvals():
-                    self.receive_approvals()
-                    self.emit_log({'state': self.state, 'data': 'charging process finish!'})
-
-            elif self.is_consumer_spent_approve_event(event, self._charging_info):
-                if not self.is_approving():
-                    self._logger.error(f'received "consumer spent event" event while not in state "approving" event: {event["event_id"]}: {event["attributes"]}')
-                    continue
-
-                if 'Ok' not in event['attributes'][-1]:
-                    self.emit_log({
-                        'desc': 'the consumer spent approval has an error, please check',
-                        'time_point': event['attributes'][1],
-                        'error': event['attributes'][-1]
-                    })
-                    continue
-                self._charging_info['provider_got'] = True
-                self.emit_balances_transferd({
-                    'from': self._charging_info['multisig_pk'],
-                    'to': self._kp.ss58_address,
-                    'value': self._charging_info['spent_token'],
-                })
-                self.emit_log({'state': self.state, 'data': 'receive multisig -> provider, approval'})
-
-                if self.is_all_approvals():
-                    self.receive_approvals()
-                    self.emit_log({'state': self.state, 'data': 'charging process finish!'})
-
-            self.emit_log({'state': self.state, 'data': f'{event["event_id"]}'})
-            self._logger.info(f'Event: {event["event_id"]}: {event["attributes"]}')
+                self._charging_info['charging_start_time'] = datetime.datetime.now()
+                self.start_charging()
+                self._logger.info('started charging')
+                self.emit_log({'state': self.state, 'data': 'Charging start'})
+            self._logger.info(f'Event: {event}')
 
     def reconnect(self):
         try:
             self._substrate.close()
-            self._substrate = get_substrate_connection(self._ws_url)
-            self.emit_data('ReconnectResponse', {'message': 'Successfully reconnected', 'success': True})
+            self._substrate = ChainUtils.get_substrate_connection(self._ws_url)
+            data = UserUtils.create_reconnect_ack(
+                'Successfully reconnected',
+                True,
+                '')
+            self.emit_out(data)
         except Exception as err:
-            self.emit_data('ReconnectResponse', {'message': f'Reconnection failed: {err}', 'success': False})
+            data = UserUtils.create_reconnect_ack(
+                '',
+                False,
+                f'Reconnection failed: {err}')
+            self.emit_out(data)
