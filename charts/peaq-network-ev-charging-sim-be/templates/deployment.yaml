@@ -81,6 +81,16 @@ spec:
         ports:
         - name: http
           containerPort: {{ .Values.redis.internalPort }}
+      - name: {{ .Values.simp2p.name }}
+        image:  "{{ .Values.simp2p.image }}:{{ .Values.simp2p.tag }}"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: VERSION
+            value: latest
+        envFrom: null
+        ports:
+        - name: http
+          containerPort: {{ .Values.simp2p.internalPort }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       imagePullSecrets:
 {{- range $pval := .Values.jx.imagePullSecrets }}
