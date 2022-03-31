@@ -21,7 +21,7 @@ redis:
   internalPort: 6379
 simp2p:
   name: simp2p
-  image: 041640568050.dkr.ecr.eu-central-1.amazonaws.com/peaq-network-ev-charging-sim-be-p2p
+  image: niazhussain/sim-p2p
   tag: latest 
   internalPort: 10333
 # optional list of image pull secrets to use to pull images

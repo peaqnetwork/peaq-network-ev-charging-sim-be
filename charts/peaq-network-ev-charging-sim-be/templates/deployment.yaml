@@ -82,7 +82,7 @@ spec:
         - name: http
           containerPort: {{ .Values.redis.internalPort }}
       - name: {{ .Values.simp2p.name }}
-        image:  "{{ .Values.sim-p2p.image }}:{{ .Values.sim-p2p.tag }}"
+        image:  "{{ .Values.simp2p.image }}:{{ .Values.sim-p2p.tag }}"
         imagePullPolicy: IfNotPresent
         env:
           - name: VERSION
