@@ -87,6 +87,8 @@ spec:
         env:
           - name: VERSION
             value: latest
+          - name: sk 
+            value: 71b28bbd45fe04f07200190180f14ba0fe3dd903eb70b6a34ee16f9f463cfd10
         envFrom: null
         ports:
         - name: http
