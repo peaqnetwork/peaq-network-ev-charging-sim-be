@@ -23,7 +23,7 @@ simp2p:
   name: simp2p
   image: niazhussain/sim-p2p
   tag: latest 
-  internalPort: 8080
+  internalPort: 10333
 # optional list of image pull secrets to use to pull images
 jx:
   # optional image pull secrets
