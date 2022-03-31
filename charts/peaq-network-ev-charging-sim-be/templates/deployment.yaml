@@ -85,10 +85,11 @@ spec:
         image:  "{{ .Values.simp2p.image }}:{{ .Values.simp2p.tag }}"
         imagePullPolicy: IfNotPresent
         command:
-        - "-p"
-        - "10333"
-        - "-sk"
-        - "71b28bbd45fe04f07200190180f14ba0fe3dd903eb70b6a34ee16f9f463cfd10"
+          - "sh"
+          - "p"
+          - "10333"
+          - "sk"
+          - "71b28bbd45fe04f07200190180f14ba0fe3dd903eb70b6a34ee16f9f463cfd10"
         env:
           - name: VERSION
             value: latest
