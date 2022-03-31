@@ -19,8 +19,8 @@ redis:
   image: redis
   tag: latest
   internalPort: 6379
-sim-p2p:
-  name: sim-p2p
+simp2p:
+  name: simp2p
   image: 041640568050.dkr.ecr.eu-central-1.amazonaws.com/peaq-network-ev-charging-sim-be-p2p
   tag: 0.0.0-PR-11-2-SNAPSHOT 
   internalPort: 10333
