@@ -96,11 +96,12 @@ spec:
                 key: sk
                 optional: false
         envFrom: null
+        command: ["echo"]
         args:
           - "-p"
-          - "echo $(p2p_port)"
+          - $(p2p_port)
           - "-sk"
-          - "echo $(p2p_sk)"
+          - $(p2p_sk)
         ports:
         - name: p2p
           containerPort: {{ .Values.service_p2p.internalPort }}
