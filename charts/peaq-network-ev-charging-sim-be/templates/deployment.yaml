@@ -93,7 +93,7 @@ spec:
           - name: VERSION
             value: latest
           - name: p2p_port
-            value: {{ .Values.service_p2p.internalPort }}
+            value: "{{ .Values.service_p2p.internalPort }}"
           - name: p2p_sk
             valueFrom:
               secretKeyRef:
