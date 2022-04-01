@@ -27,18 +27,19 @@ def send_service_request(redis, kp_consumer: Keypair, ss58_provider_addr: str, t
     redis.publish(REDIS_IN, event.SerializeToString().hex().encode('ascii'))
 
 
-def _create_p2p_request_ack(data_to_send) -> P2PMessage.Event:
-    requested_ack = P2PMessage.ServiceAckData()
-    requested_ack.resp.message = data_to_send
-    requested_ack.resp.error = False
+def _create_p2p_request_ack(wait_time: int, data_to_send: str) -> P2PMessage.Event:
+    service_requested_ack_data = P2PMessage.ServiceRequestedAckData()
+    service_requested_ack_data.wait_time = wait_time
+    service_requested_ack_data.resp.message = data_to_send
+    service_requested_ack_data.resp.error = False
     event_resp = P2PMessage.Event()
-    event_resp.service_ack_data.CopyFrom(requested_ack)
+    event_resp.service_requested_ack_data.CopyFrom(service_requested_ack_data)
     event_resp.event_id = P2PMessage.EventType.SERVICE_REQUEST_ACK
     return event_resp
 
 
-def send_request_ack(redis, data_to_send: str):
-    request_ack = _create_p2p_request_ack(data_to_send)
+def send_request_ack(redis, wait_time: int, data_to_send: str):
+    request_ack = _create_p2p_request_ack(wait_time, data_to_send)
     redis.publish(REDIS_OUT, request_ack.SerializeToString().hex().encode('ascii'))
 
 
@@ -87,6 +88,20 @@ def _create_stop_charing_ack(data_to_send) -> P2PMessage.Event:
 def send_stop_charing_ack(redis, data_to_send: str):
     ack = _create_stop_charing_ack(data_to_send)
     redis.publish(REDIS_OUT, ack.SerializeToString().hex().encode('ascii'))
+
+
+def _create_stop_charging(success: bool):
+    stop_charge_data = P2PMessage.StopChargeData()
+    stop_charge_data.success = success
+    event_resp = P2PMessage.Event()
+    event_resp.stop_charge_data.CopyFrom(stop_charge_data)
+    event_resp.event_id = P2PMessage.EventType.STOP_CHARGE
+    return event_resp
+
+
+def send_stop_charging(redis, success: bool):
+    event = _create_stop_charging(success)
+    redis.publish(REDIS_IN, event.SerializeToString().hex().encode('ascii'))
 
 
 def create_server_charging_status():

@@ -1,4 +1,9 @@
 import datetime
+import random
+
+
+RANDOM_CHARGING_PERIOD_MIN = 30
+RANDOM_CHARGING_PERIOD_MAX = 30 * 60
 
 
 def _calculate_spent_tokens(charging_period: datetime.datetime, token_deposit: int) -> (int, int):
@@ -27,3 +32,7 @@ def calculate_charging_result(charging_start_time: datetime.datetime,
         'charging_period': charging_period,
         'energy_consumption': energy_consumption
     }
+
+
+def calculate_charging_period() -> str:
+    return random.randint(RANDOM_CHARGING_PERIOD_MIN, RANDOM_CHARGING_PERIOD_MAX)

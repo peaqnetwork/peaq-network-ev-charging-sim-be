@@ -2,6 +2,7 @@ import redis
 import transitions
 import threading
 import logging
+import datetime
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
 
 from src.constants import REDIS_OUT, REDIS_IN, CHARGING_STATUS_POLLING_TIME
@@ -14,12 +15,52 @@ def run(r: redis.Redis, logger: logging.Logger):
     c.start()
 
 
-# New thread
-def send_the_status(stop_event: threading.Event, logger: logging.Logger, r: redis.Redis):
-    while not stop_event.isSet():
-        event_hex = P2PUtils.create_server_charging_status()
-        r.publish(REDIS_IN, event_hex.encode('ascii'))
-        stop_event.wait(CHARGING_STATUS_POLLING_TIME)
+class ChargingStatusPoller():
+    def __init__(self, stop_event: threading.Event, logger: logging.Logger, r: redis.Redis):
+        self._stop_event = stop_event
+        self._logger = logger
+        self._r = r
+
+    def start(self):
+        while not self._stop_event.isSet():
+            event_hex = P2PUtils.create_server_charging_status()
+            self._r.publish(REDIS_IN, event_hex.encode('ascii'))
+            self._stop_event.wait(CHARGING_STATUS_POLLING_TIME)
+
+
+def charging_status_poller_start(stop_event: threading.Event, logger: logging.Logger,
+                                 r: redis.Redis):
+
+    ChargingStatusPoller(stop_event, logger, r).start()
+
+
+class ChargingStopper():
+    def __init__(self, stop_event: threading.Event, logger: logging.Logger,
+                 r: redis.Redis, wait_time: int):
+        self._stop_event = stop_event
+        self._logger = logger
+        self._r = r
+        self._finish_time = datetime.datetime.now() + datetime.timedelta(seconds=wait_time)
+
+    def start(self):
+        while not self._stop_event.isSet():
+            if self._is_over_finish_time(self._finish_time):
+                self._logger.info('Send the stop charging automatically')
+                P2PUtils.send_stop_charging(self._r, True)
+                return
+            self._stop_event.wait(CHARGING_STATUS_POLLING_TIME)
+
+        if self._stop_event.isSet():
+            self._logger.info('Somebody send the stop charging msg')
+
+    def _is_over_finish_time(self, finish_time: datetime.datetime):
+        return datetime.datetime.now() > finish_time
+
+
+def charging_stopper_start(stop_event: threading.Event, logger: logging.Logger,
+                           r: redis.Redis, wait_time: int):
+
+    ChargingStopper(stop_event, logger, r, wait_time).start()
 
 
 class ChargingStatusMonitor():
@@ -70,9 +111,15 @@ class ChargingStatusMonitor():
             if self.is_charging_start(event):
                 self._logger.info('Start to monitor')
                 self.start_monitor()
-                monitor_thread = threading.Thread(target=send_the_status,
+                monitor_thread = threading.Thread(target=charging_status_poller_start,
                                                   args=(self._stop_event, self._logger, self._r))
                 monitor_thread.start()
+
+                stop_thread = threading.Thread(
+                    target=charging_stopper_start,
+                    args=(self._stop_event, self._logger, self._r,
+                          event.service_requested_ack_data.wait_time))
+                stop_thread.start()
 
             if self.is_charging_end(event):
                 self._stop_event.set()

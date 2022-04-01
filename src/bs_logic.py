@@ -349,14 +349,17 @@ class BusinessLogic():
                     self._multi_threshold),
             })
 
+            wait_time = CharginUtils.calculate_charging_period()
+
             # [TODO] We should change the API type and the naming...
             self.emit_service_requested({
                 'provider': self._kp.ss58_address,
                 'consumer': self._charging_info['consumer'],
                 'token_deposited': self._charging_info['deposit_token'],
+                'wait_time': wait_time,
             })
             self.emit_log({'state': self.state, 'data': 'ServiceRequested received'})
-            P2PUtils.send_request_ack(self._redis, 'ServiceRequested received')
+            P2PUtils.send_request_ack(self._redis, wait_time, 'ServiceRequested received')
 
             self.check(self._charging_info)
             if self.is_idle():
