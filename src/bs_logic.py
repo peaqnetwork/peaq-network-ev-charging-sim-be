@@ -72,6 +72,24 @@ class BusinessLogic():
         self._charging_info['charging_start_time'] = start_time
         self._charging_info['charing_wait_time'] = wait_time
 
+    def calculate_charging_status_data(self, now_time: datetime.datetime) -> dict:
+        charging_result = CharginUtils.calculate_charging_result(
+            self._charging_info['charging_start_time'],
+            now_time,
+            self._charging_info['deposit_token']
+        )
+        progress = CharginUtils.calculate_charging_status(
+            self._charging_info['charging_start_time'],
+            now_time,
+            self._charging_info['charing_wait_time']
+        )
+        return {
+            'charging_period': str(charging_result['charging_period']),
+            'energy_consumption': charging_result['energy_consumption'],
+            'spent_token': charging_result['spent_token'],
+            'progress': progress,
+        }
+
     def is_all_approvals(self) -> bool:
         return self._charging_info['consumer_got'] and self._charging_info['provider_got']
 
@@ -355,6 +373,7 @@ class BusinessLogic():
             })
 
             wait_time = CharginUtils.calculate_charging_period()
+            self._logger.info(f'⚠️  wait for {wait_time} to finish the charging')
 
             # [TODO] We should change the API type and the naming...
             self.emit_service_requested({
@@ -390,24 +409,16 @@ class BusinessLogic():
             self.start_charging()
             self._logger.info('started charging')
             self.emit_log({'state': self.state, 'data': 'Charging start'})
+
         if event.event_id == P2PMessage.EventType.CHARGING_STATUS:
             now_time = datetime.datetime.now()
-            charging_result = CharginUtils.calculate_charging_result(
-                self._charging_info['charging_start_time'],
-                now_time,
-                self._charging_info['deposit_token']
-            )
-            charging_status_data = {
-                'charging_period': str(charging_result['charging_period']),
-                'energy_consumption': charging_result['energy_consumption'],
-                'spent_token': charging_result['spent_token'],
-            }
+            charging_status_data = self.calculate_charging_status_data(now_time)
             self.emit_client_charging_status(charging_status_data)
             self.emit_log({
                 'state': self.state,
                 'data': f'Charging status: {charging_status_data}'
             })
-            P2PUtils.send_client_charging_status(self._redis, float(charging_status_data['energy_consumption']))
+            P2PUtils.send_client_charging_status(self._redis, charging_status_data['progress'])
 
         self._logger.info(f'Event: {event}')
 
