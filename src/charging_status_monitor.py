@@ -83,6 +83,9 @@ class ChargingStatusMonitor():
         # We use service request as charging start
         if event.event_id != P2PMessage.SERVICE_REQUEST_ACK:
             return False
+        if event.service_requested_ack_data.resp.error:
+            self._logger.info(f'In {event}, the error occurs, so we wont start the charging related thread')
+            return False
         if not self.is_idle():
             self._logger.info(f'In {self.state}, but receive the charging start')
             return False
@@ -90,6 +93,9 @@ class ChargingStatusMonitor():
 
     def is_charging_end(self, event):
         if event.event_id != P2PMessage.STOP_CHARGE_RESPONSE:
+            return False
+        if event.stop_charge_resp_data.resp.error:
+            self._logger.info(f'In {event}, the error occurs, so we wont stop the charging related thread')
             return False
         if not self.is_monitoring():
             self._logger.info(f'In {self.state}, but receive the stop')

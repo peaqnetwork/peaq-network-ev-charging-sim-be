@@ -27,19 +27,19 @@ def send_service_request(redis, kp_consumer: Keypair, ss58_provider_addr: str, t
     redis.publish(REDIS_IN, event.SerializeToString().hex().encode('ascii'))
 
 
-def _create_p2p_request_ack(wait_time: int, data_to_send: str) -> P2PMessage.Event:
+def _create_p2p_request_ack(wait_time: int, data_to_send: str, success: bool) -> P2PMessage.Event:
     service_requested_ack_data = P2PMessage.ServiceRequestedAckData()
     service_requested_ack_data.wait_time = wait_time
     service_requested_ack_data.resp.message = data_to_send
-    service_requested_ack_data.resp.error = False
+    service_requested_ack_data.resp.error = not success
     event_resp = P2PMessage.Event()
     event_resp.service_requested_ack_data.CopyFrom(service_requested_ack_data)
     event_resp.event_id = P2PMessage.EventType.SERVICE_REQUEST_ACK
     return event_resp
 
 
-def send_request_ack(redis, wait_time: int, data_to_send: str):
-    request_ack = _create_p2p_request_ack(wait_time, data_to_send)
+def send_request_ack(redis, wait_time: int, data_to_send: str, success: bool):
+    request_ack = _create_p2p_request_ack(wait_time, data_to_send, success)
     redis.publish(REDIS_OUT, request_ack.SerializeToString().hex().encode('ascii'))
 
 

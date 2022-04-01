@@ -64,8 +64,13 @@ class BusinessLogic():
             'spent_token': 0,
             'refund_token': 0,
             'charging_start_time': None,
+            'charing_wait_time': 0,
             'charging_end_time': None,
         }
+
+    def update_charging_start(self, start_time: datetime.datetime, wait_time: int):
+        self._charging_info['charging_start_time'] = start_time
+        self._charging_info['charing_wait_time'] = wait_time
 
     def is_all_approvals(self) -> bool:
         return self._charging_info['consumer_got'] and self._charging_info['provider_got']
@@ -359,7 +364,6 @@ class BusinessLogic():
                 'wait_time': wait_time,
             })
             self.emit_log({'state': self.state, 'data': 'ServiceRequested received'})
-            P2PUtils.send_request_ack(self._redis, wait_time, 'ServiceRequested received')
 
             self.check(self._charging_info)
             if self.is_idle():
@@ -370,7 +374,10 @@ class BusinessLogic():
                     'token_deposited': self._charging_info['deposit_token'],
                     'success': False,
                 })
+                P2PUtils.send_request_ack(self._redis, wait_time, 'Deposit check fail', False)
                 return
+
+            P2PUtils.send_request_ack(self._redis, wait_time, 'ServiceRequested received', True)
             # [TODO] We should change the API type and the naming...
             self.emit_deposit_verified({
                 'consumer': self._charging_info['consumer'],
@@ -379,7 +386,7 @@ class BusinessLogic():
             })
             self.emit_log({'state': self.state, 'data': 'Check verified'})
 
-            self._charging_info['charging_start_time'] = datetime.datetime.now()
+            self.update_charging_start(datetime.datetime.now(), wait_time)
             self.start_charging()
             self._logger.info('started charging')
             self.emit_log({'state': self.state, 'data': 'Charging start'})
