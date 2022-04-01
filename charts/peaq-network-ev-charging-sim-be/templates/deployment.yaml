@@ -84,11 +84,6 @@ spec:
       - name: {{ .Values.simp2p.name }}
         image:  "{{ .Values.simp2p.image }}:{{ .Values.simp2p.tag }}"
         imagePullPolicy: IfNotPresent
-        args:
-          - "-p"
-          - "$(p2p_port)"
-          - "-sk"
-          - "$(p2p_sk)"
         env:
           - name: VERSION
             value: latest
@@ -101,6 +96,11 @@ spec:
                 key: sk
                 optional: false
         envFrom: null
+        args:
+          - "-p"
+          - "echo $(p2p_port)"
+          - "-sk"
+          - "echo $(p2p_sk)"
         ports:
         - name: p2p
           containerPort: {{ .Values.service_p2p.internalPort }}
