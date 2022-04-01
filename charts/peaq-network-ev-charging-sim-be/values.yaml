@@ -8,7 +8,9 @@ podAnnotations: {}
 podsLabels: {}
 # Add labels to the deployment
 deploymentLabels: {}
-
+simp2pSecrets:
+  namespace: default
+  name: secret-sim-be-p2p
 image:
   repository: draft
   tag: dev
@@ -23,8 +25,6 @@ simp2p:
   name: simp2p
   image: 041640568050.dkr.ecr.eu-central-1.amazonaws.com/peaqnetwork/peaq-network-ev-charging-sim-be-p2p
   tag: latest 
-  internalPort: 10333
-  externalPort: 10333
 # optional list of image pull secrets to use to pull images
 jx:
   # optional image pull secrets
@@ -74,6 +74,8 @@ canary:
 
 service_p2p:
   name: peaq-network-ev-charging-sim-be-p2p
+  image: 041640568050.dkr.ecr.eu-central-1.amazonaws.com/peaqnetwork/peaq-network-ev-charging-sim-be-p2p
+  tag: latest 
   type: LoadBalancer
   externalPort: 10333
   internalPort: 10333
