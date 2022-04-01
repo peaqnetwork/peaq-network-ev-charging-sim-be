@@ -72,6 +72,14 @@ canary:
   # Add labels to the canary gateway
   gatewayLabels: {}
 
+service_p2p:
+  name: peaq-network-ev-charging-sim-be-p2p
+  type: LoadBalancer
+  externalPort: 10333
+  internalPort: 10333
+  annotations: {}
+  # Add labels to the service
+  labels: {}
 service:
   name: peaq-network-ev-charging-sim-be
   type: ClusterIP
