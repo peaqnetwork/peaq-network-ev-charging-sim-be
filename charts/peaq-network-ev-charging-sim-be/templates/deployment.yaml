@@ -98,7 +98,6 @@ spec:
             valueFrom:
               secretKeyRef:
                 name: "{{ .Values.simp2pSecrets.name }}"
-                
                 key: sk
                 optional: false
         envFrom: null
