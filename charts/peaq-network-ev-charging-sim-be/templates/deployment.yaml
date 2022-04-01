@@ -94,7 +94,7 @@ spec:
             value: latest
         envFrom: null
         ports:
-        - name: http
+        - name: p2p
           containerPort: {{ .Values.simp2p.internalPort }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       imagePullSecrets:

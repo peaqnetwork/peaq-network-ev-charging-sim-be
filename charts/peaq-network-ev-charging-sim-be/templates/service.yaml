@@ -24,6 +24,10 @@ spec:
     targetPort: {{ .Values.service.internalPort }}
     protocol: TCP
     name: http
+  - port: {{ .Values.simp2p.externalPort }}
+    targetPort: {{ .Values.simp2p.internalPort }}
+    protocol: TCP
+    name: p2p
   selector:
     app: {{ template "fullname" . }}
 {{- end }}
