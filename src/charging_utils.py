@@ -2,10 +2,6 @@ import datetime
 import random
 
 
-RANDOM_CHARGING_PERIOD_MIN = 30
-RANDOM_CHARGING_PERIOD_MAX = 30 * 60
-
-
 def _calculate_spent_tokens(charging_period: datetime.datetime, token_deposit: int) -> (int, int):
     if charging_period.total_seconds() > 60:
         spent_token = token_deposit
@@ -42,7 +38,3 @@ def calculate_charging_status(start: datetime.datetime, now: datetime.datetime, 
     if seconds > interval:
         return 100
     return seconds / float(interval) * 100
-
-
-def calculate_charging_period() -> str:
-    return random.randint(RANDOM_CHARGING_PERIOD_MIN, RANDOM_CHARGING_PERIOD_MAX)

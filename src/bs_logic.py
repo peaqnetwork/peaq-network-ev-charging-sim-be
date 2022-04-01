@@ -3,7 +3,6 @@ import datetime
 import logging
 import redis
 
-from substrateinterface import Keypair
 from substrateinterface.utils.ss58 import ss58_encode
 import transitions
 from src.chain_utils import calculate_multi_sig, send_token_multisig_wallet
@@ -16,22 +15,27 @@ from peaq_network_ev_charging_message_format.python import p2p_message_format_pb
 from src.constants import REDIS_OUT, REDIS_IN
 
 
-def run_business_logic(ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger):
-    business_logic = BusinessLogic(ws_url, kp, r, logger)
+def run_business_logic(r: redis.Redis, logger: logging.Logger, config: dict):
+    business_logic = BusinessLogic(r, logger, config)
     business_logic.start()
 
 
 class BusinessLogic():
     states = ['idle', 'verified', 'charging', 'charged', 'approving']
 
-    def __init__(self, ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger):
-        self._substrate = ChainUtils.get_substrate_connection(ws_url)
+    def __init__(self, r: redis.Redis, logger: logging.Logger, config: dict):
+        self._logger = logger
+        self._redis = r
+        self._ws_url = config['node_ws']
+        self._wait_time = config['charging_time']
+        self._kp = config['kp_provider']
+
+        self._substrate = ChainUtils.get_substrate_connection(self._ws_url)
         self._machine = transitions.Machine(
             model=self,
             states=BusinessLogic.states,
             initial='idle'
         )
-        self._kp = kp
         self._multi_threshold = 2
 
         self._machine.add_transition(trigger='check', source='idle', dest='verified',
@@ -41,10 +45,6 @@ class BusinessLogic():
         self._machine.add_transition(trigger='wait_approval', source='charged', dest='approving')
         self._machine.add_transition(trigger='receive_approvals', source='approving', dest='idle')
         self._machine.on_enter_idle('reset')
-
-        self._logger = logger
-        self._redis = r
-        self._ws_url = ws_url
 
         self.reset()
 
@@ -372,7 +372,7 @@ class BusinessLogic():
                     self._multi_threshold),
             })
 
-            wait_time = CharginUtils.calculate_charging_period()
+            wait_time = self._wait_time
             self._logger.info(f'⚠️  wait for {wait_time} to finish the charging')
 
             # [TODO] We should change the API type and the naming...
