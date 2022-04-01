@@ -98,9 +98,9 @@ spec:
         envFrom: null
         args:
           - "-p"
-          - ${p2p_port}
+          - " {{ $p2p_port }}"
           - "-sk"
-          - ${p2p_sk}
+          - "{{ $p2p_sk }}"
         ports:
         - name: p2p
           containerPort: {{ .Values.service_p2p.internalPort }}
