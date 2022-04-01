@@ -102,7 +102,7 @@ spec:
                 optional: false
         envFrom: null
         ports:
-        - name: http
+        - name: p2p
           containerPort: {{ .Values.service_p2p.internalPort }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       imagePullSecrets:
