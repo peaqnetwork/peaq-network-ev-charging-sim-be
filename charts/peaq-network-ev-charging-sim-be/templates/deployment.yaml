@@ -88,19 +88,19 @@ spec:
           - "-p"
           - "$(p2p_port)"
           - "-sk"
-          - "$(sk)"
+          - "$(p2p_sk)"
         env:
           - name: VERSION
             value: latest
           - name: p2p_port
             value: {{ .Values.service_p2p.internalPort }}
-          - name: sk
+          - name: p2p_sk
             valueFrom:
-            secretKeyRef:
-              name: {{ .Values.simp2pSecrets.name }}
-              namespace: {{ .Values.simp2pSecrets.namespace }}
-              key: sk
-              optional: false
+              secretKeyRef:
+                name: {{ .Values.simp2pSecrets.name }}
+                namespace: {{ .Values.simp2pSecrets.namespace }}
+                key: sk
+                optional: false
         envFrom: null
         ports:
         - name: http
