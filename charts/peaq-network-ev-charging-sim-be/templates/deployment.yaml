@@ -83,7 +83,7 @@ spec:
           containerPort: {{ .Values.redis.internalPort }}
       - name: {{ .Values.simp2p.name }}
         image:  "{{ .Values.simp2p.image }}:{{ .Values.simp2p.tag }}"
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         env:
           - name: VERSION
             value: latest
