@@ -87,20 +87,15 @@ spec:
         env:
           - name: VERSION
             value: latest
-          - name: "p2p_port"
+          - name: "port"
             value: "{{ .Values.service_p2p.internalPort }}"
-          - name: "p2p_sk"
+          - name: "sk"
             valueFrom:
               secretKeyRef:
                 name: "{{ .Values.simp2pSecrets.name }}"
                 key: sk
                 optional: false
         envFrom: null
-        args: ["-p $(p2p_port) -sk $(p2p_sk)"]
-          #- "-p"
-          #- " {{ $p2p_port }}"
-          #- "-sk"
-         # - "{{ $p2p_sk }}"
         ports:
         - name: p2p
           containerPort: {{ .Values.service_p2p.internalPort }}
