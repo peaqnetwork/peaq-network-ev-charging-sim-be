@@ -71,8 +71,8 @@ class BusinessLogic():
         return self._charging_info['consumer_got'] and self._charging_info['provider_got']
 
     def is_allow_charging(self, data: dict) -> bool:
-        result = self._substrate.query('System', 'Account', [data['multisig_pk']])
-        return result['data']['free'] >= data['deposit_token']
+        token = get_station_balance(self._substrate, data['multisig_pk'], self._logger)
+        return token >= data['deposit_token']
 
     def is_service_requested_event(self, p2p_event: P2PMessage.Event, interested_addr: str) -> bool:
         return P2PUtils.is_service_requested_event(p2p_event) and \
@@ -235,7 +235,7 @@ class BusinessLogic():
 
         if event.event_id == P2PMessage.GET_BALANCE:
             try:
-                balance = get_station_balance(self._substrate, self._kp, self._logger)
+                balance = get_station_balance(self._substrate, self._kp.ss58_address, self._logger)
                 data = UserUtils.create_get_balance_ack(str(balance), True, '')
                 self.emit_out(data)
             except Exception as e:
