@@ -329,7 +329,7 @@ class BusinessLogic():
                                            self._kp.ss58_address):
             if not self.is_idle():
                 self._logger.error('received "service requested" event while not in state "idle"'
-                                   f'event: {event_id}: {attributes}')
+                                   f'event: {event}: {attributes}')
                 return
 
             p2p_event = event
