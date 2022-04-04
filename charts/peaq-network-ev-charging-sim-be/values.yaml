@@ -74,8 +74,6 @@ canary:
 
 service_p2p:
   name: peaq-network-ev-charging-sim-be-p2p
-  image: 041640568050.dkr.ecr.eu-central-1.amazonaws.com/peaqnetwork/peaq-network-ev-charging-sim-be-p2p
-  tag: latest 
   type: LoadBalancer
   externalPort: 10333
   internalPort: 10333
