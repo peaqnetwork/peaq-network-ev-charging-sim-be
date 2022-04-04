@@ -105,6 +105,11 @@ def submit_extrinsic(substrate: SubstrateInterface, extrinsic, logger):
     for i in range(RETRY_TIMES):
         try:
             return substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        except BrokenPipeError as err:
+            logger.error(f'failed to get station balance: {err}')
+            time.sleep(RETRY_PERIOD)
+            substrate.close()
+            substrate.connect_websocket()
         except Exception as err:
             logger.error(f'failed to get station balance: {err}')
             time.sleep(RETRY_PERIOD)
@@ -115,6 +120,11 @@ def get_account_nonce(substrate: SubstrateInterface, ss58_addr: str, logger):
     for i in range(RETRY_TIMES):
         try:
             return substrate.get_account_nonce(ss58_addr)
+        except BrokenPipeError as err:
+            logger.error(f'failed to get station balance: {err}')
+            time.sleep(RETRY_PERIOD)
+            substrate.close()
+            substrate.connect_websocket()
         except Exception as err:
             logger.error(f'failed to get station balance: {err}')
             time.sleep(RETRY_PERIOD)
