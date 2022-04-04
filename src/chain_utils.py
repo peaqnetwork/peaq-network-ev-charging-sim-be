@@ -13,7 +13,7 @@ from peaq_network_ev_charging_message_format.python import p2p_message_format_pb
 
 version = 'v2'
 
-RETRY_TIMES = 5
+RETRY_TIMES = 24
 RETRY_PERIOD = 5
 
 
@@ -111,6 +111,16 @@ def submit_extrinsic(substrate: SubstrateInterface, extrinsic, logger):
     raise IOError(f'After {RETRY_TIMES} times, still cannot submit extrinsic')
 
 
+def get_account_nonce(substrate: SubstrateInterface, ss58_addr: str, logger):
+    for i in range(RETRY_TIMES):
+        try:
+            return substrate.get_account_nonce(ss58_addr)
+        except Exception as err:
+            logger.error(f'failed to get station balance: {err}')
+            time.sleep(RETRY_PERIOD)
+    raise IOError(f'After {RETRY_TIMES} times, still cannot submit extrinsic')
+
+
 def send_token_multisig_wallet(substrate: SubstrateInterface, kp: Keypair,
                                token_num: int, dst_addr: str,
                                other_signatories: [str], threshold: int,
@@ -123,7 +133,7 @@ def send_token_multisig_wallet(substrate: SubstrateInterface, kp: Keypair,
             'value': token_num
         })
 
-    nonce = substrate.get_account_nonce(kp.ss58_address)
+    nonce = get_account_nonce(substrate, kp.ss58_address, logger)
 
     as_multi_call = substrate.compose_call(
         call_module='MultiSig',
@@ -165,7 +175,7 @@ def compose_delivery_info(token_num: int, info: dict) -> dict:
 
 def send_service_deliver(substrate: SubstrateInterface, kp: Keypair,
                          user_addr: str, refund_info: dict, spent_info: dict, logger: logging.Logger):
-    nonce = substrate.get_account_nonce(kp.ss58_address)
+    nonce = get_account_nonce(substrate, kp.ss58_address, logger)
     call = substrate.compose_call(
         call_module='Transaction',
         call_function='service_delivered',
@@ -214,7 +224,7 @@ def _compose_did(kp: Keypair):
 
 
 def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
-    nonce = substrate.get_account_nonce(kp.ss58_address)
+    nonce = get_account_nonce(substrate, kp.ss58_address, logger)
 
     did = _compose_did(kp)
 
@@ -241,7 +251,7 @@ def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logg
 
 
 def republish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
-    nonce = substrate.get_account_nonce(kp.ss58_address)
+    nonce = get_account_nonce(substrate, kp.ss58_address, logger)
 
     did = _compose_did(kp)
 
@@ -268,7 +278,7 @@ def republish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Lo
 
 
 def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
-    nonce = substrate.get_account_nonce(kp.ss58_address)
+    nonce = get_account_nonce(substrate, kp.ss58_address, logger)
 
     call = substrate.compose_call(
         call_module='PeaqDid',

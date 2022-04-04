@@ -52,7 +52,7 @@ def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, kp_consumer: 
             'value': token_num
         })
 
-    nonce = substrate.get_account_nonce(kp_consumer.ss58_address)
+    nonce = ChainUtils.get_account_nonce(substrate, kp_consumer.ss58_address, logging.getLogger('logger'))
     extrinsic = substrate.create_signed_extrinsic(
         call=call,
         keypair=kp_consumer,
@@ -67,7 +67,7 @@ def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, kp_consumer: 
 def send_service_request(substrate: SubstrateInterface, kp_consumer: Keypair,
                          kp_provider: Keypair, token_num: int):
     logging.info('----- Consumer sends the serviice requested to peaq-transaction')
-    nonce = substrate.get_account_nonce(kp_consumer.ss58_address)
+    nonce = ChainUtils.get_account_nonce(substrate, kp_consumer.ss58_address, logging.getLogger('logger'))
     call = substrate.compose_call(
         call_module='Transaction',
         call_function='service_requested',
@@ -100,7 +100,7 @@ def send_spent_token_from_multisig_wallet(
             'value': token_num * TOKEN_NUM_BASE
         })
 
-    nonce = substrate.get_account_nonce(kp_provider.ss58_address)
+    nonce = ChainUtils.get_account_nonce(substrate, kp_provider.ss58_address, logging.getLogger('logger'))
 
     as_multi_call = substrate.compose_call(
         call_module='MultiSig',
@@ -143,7 +143,7 @@ def send_refund_token_from_multisig_wallet(
             'value': token_num * TOKEN_NUM_BASE
         })
 
-    nonce = substrate.get_account_nonce(kp_provider.ss58_address)
+    nonce = ChainUtils.get_account_nonce(substrate, kp_provider.ss58_address, logging.getLogger('logger'))
 
     as_multi_call = substrate.compose_call(
         call_module='MultiSig',
@@ -176,7 +176,7 @@ def send_refund_token_from_multisig_wallet(
 
 def approve_token(substrate: SubstrateInterface, kp_sign: Keypair,
                   other_signatories: [str], threshold: int, info: dict):
-    nonce = substrate.get_account_nonce(kp_sign.ss58_address)
+    nonce = ChainUtils.get_account_nonce(substrate, kp_sign.ss58_address, logging.getLogger('logger'))
 
     as_multi_call = substrate.compose_call(
         call_module='MultiSig',
