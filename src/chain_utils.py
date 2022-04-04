@@ -106,13 +106,13 @@ def submit_extrinsic(substrate: SubstrateInterface, extrinsic, logger):
         try:
             return substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
         except BrokenPipeError as err:
-            logger.error(f'failed to get station balance: {err}')
+            logger.error(f'failed to submit_extrinsic : {err}')
             time.sleep(RETRY_PERIOD)
             url = substrate.url
             substrate.close()
             substrate = get_substrate_connection(url)
         except Exception as err:
-            logger.error(f'failed to get station balance: {err}')
+            logger.error(f'failed to submit_extrinsic : {err}')
             time.sleep(RETRY_PERIOD)
     raise IOError(f'After {RETRY_TIMES} times, still cannot submit extrinsic')
 
@@ -122,15 +122,37 @@ def get_account_nonce(substrate: SubstrateInterface, ss58_addr: str, logger):
         try:
             return substrate.get_account_nonce(ss58_addr)
         except BrokenPipeError as err:
-            logger.error(f'failed to get station balance: {err}')
+            logger.error(f'failed to get_account_nonce: {err}')
             time.sleep(RETRY_PERIOD)
             url = substrate.url
             substrate.close()
             substrate = get_substrate_connection(url)
         except Exception as err:
-            logger.error(f'failed to get station balance: {err}')
+            logger.error(f'failed to get_account_nonce: {err}')
             time.sleep(RETRY_PERIOD)
     raise IOError(f'After {RETRY_TIMES} times, still cannot submit extrinsic')
+
+
+def get_station_balance(substrate: SubstrateInterface, ss58_addr: str, logger: logging.Logger):
+    for _ in range(RETRY_TIMES):
+        try:
+            account_info = substrate.query(
+                module='System',
+                storage_function='Account',
+                params=[ss58_addr],
+            )
+
+            return account_info['data']['free'].value
+        except BrokenPipeError as err:
+            logger.error(f'failed to get_station_balance: {err}')
+            time.sleep(RETRY_PERIOD)
+            url = substrate.url
+            substrate.close()
+            substrate = get_substrate_connection(url)
+        except Exception as err:
+            logger.error(f'failed to get_station_balance: {err}')
+            time.sleep(RETRY_PERIOD)
+    raise IOError(f'After {RETRY_TIMES} times, still cannot get the station balance')
 
 
 def send_token_multisig_wallet(substrate: SubstrateInterface, kp: Keypair,
@@ -310,22 +332,6 @@ def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger)
 
     receipt = submit_extrinsic(substrate, extrinsic, logger)
     return receipt
-
-
-def get_station_balance(substrate: SubstrateInterface, ss58_addr: str, logger: logging.Logger):
-    for _ in range(RETRY_TIMES):
-        try:
-            account_info = substrate.query(
-                module='System',
-                storage_function='Account',
-                params=[ss58_addr],
-            )
-
-            return account_info['data']['free'].value
-        except Exception as err:
-            logger.error(f'failed to get station balance: {err}')
-            time.sleep(RETRY_PERIOD)
-    raise IOError(f'After {RETRY_TIMES} times, still cannot get the station balance')
 
 
 def decode_chain_event(event: dict) -> P2PMessage.Event:
