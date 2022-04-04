@@ -1,4 +1,4 @@
-# EV Charging Simulator
+# EV Charging Simulator delete it after testing
 
 The project is split into a backend and frontend.
 Please checkin the code into the appropriate folder.
