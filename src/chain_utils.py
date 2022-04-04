@@ -13,8 +13,8 @@ from peaq_network_ev_charging_message_format.python import p2p_message_format_pb
 
 version = 'v2'
 
-RETRY_TIMES = 120
-RETRY_PERIOD = 5
+RETRY_TIMES = 200
+RETRY_PERIOD = 3
 
 
 def parse_config(path: str) -> Keypair:
