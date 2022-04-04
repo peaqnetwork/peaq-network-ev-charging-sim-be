@@ -8,7 +8,9 @@ podAnnotations: {}
 podsLabels: {}
 # Add labels to the deployment
 deploymentLabels: {}
-
+simp2pSecrets:
+  namespace: default
+  name: secret-sim-be-p2p
 image:
   repository: draft
   tag: dev
@@ -19,6 +21,10 @@ redis:
   image: redis
   tag: latest
   internalPort: 6379
+simp2p:
+  name: simp2p
+  image: 041640568050.dkr.ecr.eu-central-1.amazonaws.com/peaqnetwork/peaq-network-ev-charging-sim-be-p2p
+  tag: latest 
 # optional list of image pull secrets to use to pull images
 jx:
   # optional image pull secrets
@@ -66,6 +72,14 @@ canary:
   # Add labels to the canary gateway
   gatewayLabels: {}
 
+service_p2p:
+  name: peaq-network-ev-charging-sim-be-p2p
+  type: LoadBalancer
+  externalPort: 10333
+  internalPort: 10333
+  annotations: {}
+  # Add labels to the service
+  labels: {}
 service:
   name: peaq-network-ev-charging-sim-be
   type: ClusterIP
@@ -74,13 +88,6 @@ service:
   annotations: {}
   # Add labels to the service
   labels: {}
-resources:
-  limits:
-    cpu: 400m
-    memory: 512Mi
-  requests:
-    cpu: 200m
-    memory: 256Mi
 probePath: /
 livenessProbe:
   initialDelaySeconds: 60
