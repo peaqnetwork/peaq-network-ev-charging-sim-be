@@ -13,7 +13,7 @@ from peaq_network_ev_charging_message_format.python import p2p_message_format_pb
 
 version = 'v2'
 
-RETRY_TIMES = 24
+RETRY_TIMES = 120
 RETRY_PERIOD = 5
 
 
