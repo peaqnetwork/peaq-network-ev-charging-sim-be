@@ -79,6 +79,10 @@ def is_my_did(did_doc: DIDMessage.Document, ss58_addr: str) -> bool:
 def is_did_valid(did_doc: DIDMessage.Document, ss58_addr: str, default_path: str) -> bool:
     if not is_my_did(did_doc, ss58_addr):
         return False
-    if load_did(default_path) != did_doc:
+    default_did = load_did(default_path)
+    default_did.signature.hash = ''
+    did_doc.signature.hash = ''
+
+    if default_did != did_doc:
         return False
     return True

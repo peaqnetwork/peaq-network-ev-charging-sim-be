@@ -17,7 +17,7 @@
   "signature": {
     "type": "Sr25519VerificationKey2020",
     "issuer": "did:peaq:5EhqcLBWTWq5pE45wnkFFVEzL6f8TSLU2mxDZcE3FaVg726E",
-    "hash": "3eede08a25357fb7c142011bf2f697cd2e903906e9afa4745c38a52d35cc7507d52f06be9cdae13902349d3a1b5403aab520002e7b71cd7d624d79d010e0e580"
+    "hash": "2abb13a08102c02579744359c8af24b5ab9e389e8026ea98dd90a5043f572411281b20e9d89d429b71fe3af4ba6499d45dbbe3b7c8537bbc00ac4936ee07a18e"
   },
   "services": [
     {
