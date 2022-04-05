@@ -1,5 +1,4 @@
 import datetime
-import random
 
 
 def _calculate_spent_tokens(charging_period: datetime.datetime, token_deposit: int) -> (int, int):
