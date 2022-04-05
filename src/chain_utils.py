@@ -1,6 +1,5 @@
 import yaml
 import logging
-import re
 import redis
 import json
 
@@ -9,8 +8,7 @@ from substrateinterface.utils.ss58 import ss58_encode
 from scalecodec.base import RuntimeConfiguration
 from scalecodec.type_registry import load_type_registry_preset
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
-
-version = 'v2'
+from src import did_utils as DIDUtils
 
 
 def parse_config(path: str) -> Keypair:
@@ -172,45 +170,20 @@ def send_service_deliver(substrate: SubstrateInterface, kp: Keypair,
     show_extrinsic(receipt, 'service_delivered', logger)
 
 
-def _compose_did(kp: Keypair):
-    did = '''{"id": "did:peaq:%s",
-      "controller": "did:peaq:%s",
-      "verificationMethod": [
-        {
-            "id": "%s",
-            "type": "Sr25519VerificationKey2019",
-            "controller": "did:peaq:%s",
-            "publicKeyMultibase": "%s" 
-        }
-      ],
-      "service": [
-        {
-            "id": "%s",
-            "type": "payment",
-            "serviceEndpoint": "%s"
-        }
-      ],
-      "authentication": [
-        "%s"
-      ]
-    }''' % (kp.ss58_address, kp.ss58_address, kp.public_key.hex(), kp.ss58_address,
-            kp.ss58_address, kp.ss58_address, kp.ss58_address, kp.public_key.hex())
-
-    return re.sub(r'[\n\t\s]*', '', did)
-
-
-def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
+def publish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logger: logging.Logger):
     nonce = substrate.get_account_nonce(kp.ss58_address)
 
-    did = _compose_did(kp)
+    did_doc = DIDUtils.load_did(did_path)
+    did_hex = did_doc.SerializeToString().hex().encode('ascii')
 
     call = substrate.compose_call(
         call_module='PeaqDid',
         call_function='add_attribute',
         call_params={
             'did_account': kp.ss58_address,
-            'name': version,
-            'value': did,
+            'name': DIDUtils.VERSION,
+            'value': did_hex,
+            # [TODO]??
             'valid_for': 20
         }
     )
@@ -226,18 +199,20 @@ def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logg
     return receipt
 
 
-def republish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
+def republish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logger: logging.Logger):
     nonce = substrate.get_account_nonce(kp.ss58_address)
 
-    did = _compose_did(kp)
+    did_doc = DIDUtils.load_did(did_path)
+    did_hex = did_doc.SerializeToString().hex().encode('ascii')
 
     call = substrate.compose_call(
         call_module='PeaqDid',
         call_function='update_attribute',
         call_params={
             'did_account': kp.ss58_address,
-            'name': version,
-            'value': did,
+            'name': DIDUtils.VERSION,
+            'value': did_hex,
+            # [TODO]??
             'valid_for': 20
         }
     )
@@ -261,7 +236,7 @@ def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger)
         call_function='read_attribute',
         call_params={
             'did_account': kp.ss58_address,
-            'name': version,
+            'name': DIDUtils.VERSION,
         }
     )
 
@@ -286,7 +261,7 @@ def get_station_balance(substrate: SubstrateInterface, kp: Keypair, logger: logg
     return account_info['data']['free'].value
 
 
-def decode_chain_event(event: dict) -> P2PMessage.Event:
+def decode_chain_event(event: str) -> P2PMessage.Event:
     user_info = P2PMessage.Event()
     user_info.ParseFromString(bytes.fromhex(event))
     return user_info

@@ -23,10 +23,11 @@ RUNTIME_ENV = 'RUNTIME_ENV'
 RUNTIME_DEFAULT = 'dev'
 
 
-def create_main_logic(ws_url: str, socketio: SocketIO, kp_provider: Keypair, r: redis.Redis, logger: logging.Logger):
+def create_main_logic(ws_url: str, socketio: SocketIO, kp_provider: Keypair,
+                      r: redis.Redis, logger: logging.Logger, did_path: str):
     monitor_thread = Thread(target=run_substrate_monitor, args=(ws_url, r,))
     business_logic_thread = Thread(target=run_business_logic,
-                                   args=(ws_url, kp_provider, r, logger,))
+                                   args=(ws_url, kp_provider, r, logger, did_path,))
 
     read_redis_thread = Thread(target=app.redis_reader, args=(socketio, r))
 
@@ -53,6 +54,8 @@ def parse_arguement():
                         type=str, default='etc/logger.yaml')
     parser.add_argument('--rconfig', help='redis config yaml file',
                         type=str, default='etc/redis.yaml')
+    parser.add_argument('--did_path', help='did document path',
+                        type=str, default='etc/did_doc.json')
     return parser.parse_args()
 
 
@@ -79,5 +82,5 @@ if __name__ == '__main__':
         kp_provider = generate_key_pair(logger)
 
     be, socketio = app.create_app('secret', True, args.node_ws, kp_provider, redis, logger)
-    socketio.start_background_task(create_main_logic, args.node_ws, socketio, kp_provider, redis, logger)
+    socketio.start_background_task(create_main_logic, args.node_ws, socketio, kp_provider, redis, logger, args.did_path)
     socketio.run(be, debug=False, host=args.url, port=args.port)

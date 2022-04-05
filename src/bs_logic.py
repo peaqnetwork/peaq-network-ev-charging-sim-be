@@ -11,20 +11,21 @@ from src.chain_utils import compose_delivery_info, publish_did, read_did, republ
 from src import chain_utils as ChainUtils
 from src import p2p_utils as P2PUtils
 from src import user_utils as UserUtils
+from src import did_utils as DIDUtils
 from src import charging_utils as CharginUtils
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
 from src.constants import REDIS_OUT, REDIS_IN
 
 
-def run_business_logic(ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger):
-    business_logic = BusinessLogic(ws_url, kp, r, logger)
+def run_business_logic(ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger, did_path: str):
+    business_logic = BusinessLogic(ws_url, kp, r, logger, did_path)
     business_logic.start()
 
 
 class BusinessLogic():
     states = ['idle', 'verified', 'charging', 'charged', 'approving']
 
-    def __init__(self, ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger):
+    def __init__(self, ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger, did_path: str):
         self._substrate = ChainUtils.get_substrate_connection(ws_url)
         self._machine = transitions.Machine(
             model=self,
@@ -45,6 +46,7 @@ class BusinessLogic():
         self._logger = logger
         self._redis = r
         self._ws_url = ws_url
+        self._did_path = did_path
 
         self.reset()
 
@@ -145,9 +147,9 @@ class BusinessLogic():
 
         try:
             if did_exist:
-                receipt = republish_did(self._substrate, self._kp, self._logger)
+                receipt = republish_did(self._substrate, self._kp, self._did_path, self._logger)
             else:
-                receipt = publish_did(self._substrate, self._kp, self._logger)
+                receipt = publish_did(self._substrate, self._kp, self._did_path, self._logger)
 
             if receipt.is_success:
                 data = UserUtils.create_republish_did_ack(
@@ -183,15 +185,18 @@ class BusinessLogic():
             r = read_did(self._substrate, self._kp, self._logger)
             if r.is_success:
                 event = [_.value for _ in r.triggered_events
-                         if _.value['event_id'] == 'AttributeRead'][0]
-                self._logger.info(f'successfully read did: {json.loads(event["attributes"]["value"])}')
+                         if _.value['event_id'] == 'AttributeRead'][0]["attributes"]
+                did_doc = DIDUtils.decode_did_event(event)
+                if not DIDUtils.is_did_valid(did_doc, self._kp.ss58_address, self._did_path):
+                    raise IOError(f'The did document, {did_doc}, is not the same as default setting')
+                self._logger.info(f'successfully read did: {did_doc}')
         except Exception as err:
             self._logger.error(f'failed to read did: {err}')
 
         if r is not None and not r.is_success:
             try:
                 self._logger.info('publishing did...')
-                r = publish_did(self._substrate, self._kp, self._logger)
+                r = publish_did(self._substrate, self._kp, self._did_path, self._logger)
             except Exception as err:
                 self._logger.error(f'failed to publish did: {err}')
 

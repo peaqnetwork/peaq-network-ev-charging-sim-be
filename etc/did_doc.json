@@ -1,0 +1,44 @@
+{
+  "id": "did:peaq:5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+  "controller": "did:peaq:5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+  "verificationMethods": [
+    {
+      "controller": "did:peaq:5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+      "publicKeyMultibase": "5CzfGC7p9sC39Zvb2bg4WgtVvx6c6JVb1SMwsNDVTmRrEas2"
+    },
+    {
+      "id": "fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e",
+      "type": "Sr25519VerificationKey2020",
+      "controller": "did:peaq:5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+      "publicKeyMultibase": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc"
+    }
+  ],
+  "signature": {
+    "type": "Sr25519VerificationKey2020",
+    "issuer": "did:peaq:5EhqcLBWTWq5pE45wnkFFVEzL6f8TSLU2mxDZcE3FaVg726E",
+    "hash": "2abb13a08102c02579744359c8af24b5ab9e389e8026ea98dd90a5043f572411281b20e9d89d429b71fe3af4ba6499d45dbbe3b7c8537bbc00ac4936ee07a18e"
+  },
+  "services": [
+    {
+      "id": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+      "type": "payment",
+      "stringData": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc"
+    },
+    {
+      "id": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+      "stringData": "/ip4/18.192.206.66/tcp/10333/p2p/12D3KooWCazx4ZLTdrA1yeTTmCy5sGW32SFejztJTGdSZwnGf5Yo"
+    },
+    {
+      "id": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+      "type": "metadata",
+      "metadata": {
+        "plugType": "CEV2021",
+        "power": "2000KwH"
+      }
+    }
+  ],
+  "authentications": [
+    "fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e",
+    "292684abbb28def63807c5f6e84e9e8689769eb37b1ab130d79dbfbf1b9a0d44"
+  ]
+}
