@@ -45,8 +45,12 @@ def load_did(did_path: str) -> DIDMessage.Document:
     return Parse(json.dumps(default_did), DIDMessage.Document())
 
 
+def is_my_did(did_doc: DIDMessage.Document, ss58_addr: str) -> bool:
+    return did_doc.id == f'did:peaq:{ss58_addr}'
+
+
 def is_did_valid(did_doc: DIDMessage.Document, ss58_addr: str, default_path: str) -> bool:
-    if did_doc.id != f'did:peaq:{ss58_addr}':
+    if not is_my_did(did_doc, ss58_addr):
         return False
     if load_did(default_path) != did_doc:
         return False

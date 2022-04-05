@@ -3,7 +3,7 @@ import logging
 import redis
 import json
 
-from substrateinterface import SubstrateInterface, Keypair
+from substrateinterface import SubstrateInterface, Keypair, ExtrinsicReceipt
 from substrateinterface.utils.ss58 import ss58_encode
 from scalecodec.base import RuntimeConfiguration
 from scalecodec.type_registry import load_type_registry_preset
@@ -170,10 +170,12 @@ def send_service_deliver(substrate: SubstrateInterface, kp: Keypair,
     show_extrinsic(receipt, 'service_delivered', logger)
 
 
-def publish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logger: logging.Logger):
+def publish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logger: logging.Logger) -> ExtrinsicReceipt:
     nonce = substrate.get_account_nonce(kp.ss58_address)
 
     did_doc = DIDUtils.load_did(did_path)
+    if not DIDUtils.is_my_did(did_doc, kp.ss58_address):
+        raise IOError(f'the default did {did_doc} does not belong to {kp.ss58_address}')
     did_hex = did_doc.SerializeToString().hex().encode('ascii')
 
     call = substrate.compose_call(
@@ -199,10 +201,12 @@ def publish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logge
     return receipt
 
 
-def republish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logger: logging.Logger):
+def republish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logger: logging.Logger) -> ExtrinsicReceipt:
     nonce = substrate.get_account_nonce(kp.ss58_address)
 
     did_doc = DIDUtils.load_did(did_path)
+    if not DIDUtils.is_my_did(did_doc, kp.ss58_address):
+        raise IOError(f'the default did {did_doc} does not belong to {kp.ss58_address}')
     did_hex = did_doc.SerializeToString().hex().encode('ascii')
 
     call = substrate.compose_call(
@@ -228,7 +232,7 @@ def republish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, log
     return receipt
 
 
-def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
+def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger) -> ExtrinsicReceipt:
     nonce = substrate.get_account_nonce(kp.ss58_address)
 
     call = substrate.compose_call(
