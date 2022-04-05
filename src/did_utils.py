@@ -15,28 +15,55 @@ def decode_did_event(did: dict) -> DIDMessage.Document:
     return did_info
 
 
-# TODO: Guess it will induce some error, need to check, put it to the tool?
-def compose_did(kp: Keypair):
+def compose_did(sr25519_kp: Keypair, ed25519_kp: Keypair, issuer_kp: Keypair, p2p_ip: str):
     document = DIDMessage.Document()
-    document.id = f'did:peaq:{kp.ss58_address}'
-    document.controller = f'did:peaq:{kp.ss58_address}'
+    document.id = f'did:peaq:{sr25519_kp.ss58_address}'
+    document.controller = f'did:peaq:{sr25519_kp.ss58_address}'
 
-    verification_method = DIDMessage.VerificationMethod()
-    verification_method.id = f'{kp.public_key.hex()}'
-    verification_method.type = DIDMessage.VerificationType.Sr25519VerificationKey2020
-    verification_method.controller = f'did:peaq:{kp.ss58_address}'
-    verification_method.publicKeyMultibase = f'{kp.ss58_address}'
-    document.verificationMethods.push_back(verification_method)
+    sr25519_verification = DIDMessage.VerificationMethod()
+    sr25519_verification.id = f'{sr25519_kp.public_key.hex()}'
+    sr25519_verification.type = DIDMessage.VerificationType.Sr25519VerificationKey2020
+    sr25519_verification.controller = f'did:peaq:{sr25519_kp.ss58_address}'
+    sr25519_verification.publicKeyMultibase = f'{sr25519_kp.ss58_address}'
 
-    service = DIDMessage.Service()
-    service.id = f'{kp.ss58_address}'
-    service.type = DIDMessage.ServiceType.payment
-    service.stringData.CopyFrom(kp.ss58_address)
-    document.services.push_back(service)
+    ed25519_verification = DIDMessage.VerificationMethod()
+    ed25519_verification.id = f'{ed25519_kp.public_key.hex()}'
+    ed25519_verification.type = DIDMessage.VerificationType.Ed25519VerificationKey2020
+    ed25519_verification.controller = f'did:peaq:{sr25519_kp.ss58_address}'
+    ed25519_verification.publicKeyMultibase = f'{ed25519_kp.ss58_address}'
 
-    document.authentications.push_back(kp.public_key.hex())
+    document.verificationMethods.extend([ed25519_verification, sr25519_verification])
 
-    return document.SerializeToString().hex().encode('ascii')
+    signature = DIDMessage.Signature()
+    signature.type = DIDMessage.VerificationType.Sr25519VerificationKey2020
+    signature.issuer = f'did:peaq:{issuer_kp.ss58_address}'
+    signature.hash = issuer_kp.sign('0x' + sr25519_kp.public_key.hex()).hex()
+    document.signature.CopyFrom(signature)
+
+    payment_service = DIDMessage.Service()
+    payment_service.id = f'{sr25519_kp.ss58_address}'
+    payment_service.type = DIDMessage.ServiceType.payment
+    payment_service.stringData = sr25519_kp.ss58_address
+
+    p2p_service = DIDMessage.Service()
+    p2p_service.id = f'{sr25519_kp.ss58_address}'
+    p2p_service.type = DIDMessage.ServiceType.p2p
+    p2p_service.stringData = f'/ip4/{p2p_ip}/tcp/10333/p2p/12D3KooWCazx4ZLTdrA1yeTTmCy5sGW32SFejztJTGdSZwnGf5Yo'
+
+    meta = DIDMessage.Metadata()
+    meta.plugType = 'CEV2021'
+    meta.power = '2000KwH'
+    meta.status = DIDMessage.Status.AVAILABLE
+
+    meta_service = DIDMessage.Service()
+    meta_service.id = f'{sr25519_kp.ss58_address}'
+    meta_service.type = DIDMessage.ServiceType.metadata
+    meta_service.metadata.CopyFrom(meta)
+
+    document.services.extend([payment_service, p2p_service, meta_service])
+    document.authentications.extend([sr25519_kp.public_key.hex(), ed25519_kp.public_key.hex()])
+
+    return document
 
 
 def load_did(did_path: str) -> DIDMessage.Document:
