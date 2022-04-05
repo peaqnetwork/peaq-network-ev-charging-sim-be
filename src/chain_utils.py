@@ -185,8 +185,7 @@ def publish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logge
             'did_account': kp.ss58_address,
             'name': DIDUtils.VERSION,
             'value': did_hex,
-            # [TODO]??
-            'valid_for': 20
+            'valid_for': 4_294_967_295,
         }
     )
 
@@ -216,8 +215,7 @@ def republish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, log
             'did_account': kp.ss58_address,
             'name': DIDUtils.VERSION,
             'value': did_hex,
-            # [TODO]??
-            'valid_for': 20
+            'valid_for': 4_294_967_295
         }
     )
 
