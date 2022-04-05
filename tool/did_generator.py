@@ -21,8 +21,9 @@ def parse_arguement():
                         type=str, required=True)
     parser.add_argument('--provider_mnemonic', help='Keypair for the did document',
                         type=str, default='')
-    parser.add_argument('--p2p_domain', help='add the p2p domain',
-                        type=str, default='18.192.206.66')
+    parser.add_argument('--p2p_url', help='add the p2p domain',
+                        type=str,
+                        default='/ip4/18.192.206.66/tcp/10333/p2p/12D3KooWCazx4ZLTdrA1yeTTmCy5sGW32SFejztJTGdSZwnGf5Yo')
     return parser.parse_args()
 
 
@@ -46,5 +47,5 @@ if __name__ == '__main__':
 
     issuer_kp = Keypair.create_from_mnemonic(args.issuer_mnemonic)
     did = DIDUtils.compose_did(sr25519_provider_kp, ed25519_provider_kp,
-                               issuer_kp, args.p2p_domain)
+                               issuer_kp, args.p2p_url)
     print(MessageToJson(did))

@@ -15,7 +15,7 @@ def decode_did_event(did: dict) -> DIDMessage.Document:
     return did_info
 
 
-def compose_did(sr25519_kp: Keypair, ed25519_kp: Keypair, issuer_kp: Keypair, p2p_ip: str):
+def compose_did(sr25519_kp: Keypair, ed25519_kp: Keypair, issuer_kp: Keypair, p2p_url: str):
     document = DIDMessage.Document()
     document.id = f'did:peaq:{sr25519_kp.ss58_address}'
     document.controller = f'did:peaq:{sr25519_kp.ss58_address}'
@@ -48,7 +48,7 @@ def compose_did(sr25519_kp: Keypair, ed25519_kp: Keypair, issuer_kp: Keypair, p2
     p2p_service = DIDMessage.Service()
     p2p_service.id = f'{sr25519_kp.ss58_address}'
     p2p_service.type = DIDMessage.ServiceType.p2p
-    p2p_service.stringData = f'/ip4/{p2p_ip}/tcp/10333/p2p/12D3KooWCazx4ZLTdrA1yeTTmCy5sGW32SFejztJTGdSZwnGf5Yo'
+    p2p_service.stringData = p2p_url
 
     meta = DIDMessage.Metadata()
     meta.plugType = 'CEV2021'
