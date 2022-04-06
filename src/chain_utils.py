@@ -176,7 +176,6 @@ def publish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logge
     did_doc = DIDUtils.load_did(did_path)
     if not DIDUtils.is_my_did(did_doc, kp.ss58_address):
         raise IOError(f'the default did {did_doc} does not belong to {kp.ss58_address}')
-    did_hex = did_doc.SerializeToString().hex().encode('ascii')
 
     call = substrate.compose_call(
         call_module='PeaqDid',
@@ -184,8 +183,8 @@ def publish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logge
         call_params={
             'did_account': kp.ss58_address,
             'name': DIDUtils.VERSION,
-            'value': did_hex,
-            'valid_for': 4_294_967_295,
+            'value': did_doc.SerializeToString().hex().encode('ascii'),
+            'valid_for': DIDUtils.VALID_FOR,
         }
     )
 
@@ -206,7 +205,6 @@ def republish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, log
     did_doc = DIDUtils.load_did(did_path)
     if not DIDUtils.is_my_did(did_doc, kp.ss58_address):
         raise IOError(f'the default did {did_doc} does not belong to {kp.ss58_address}')
-    did_hex = did_doc.SerializeToString().hex().encode('ascii')
 
     call = substrate.compose_call(
         call_module='PeaqDid',
@@ -214,8 +212,8 @@ def republish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, log
         call_params={
             'did_account': kp.ss58_address,
             'name': DIDUtils.VERSION,
-            'value': did_hex,
-            'valid_for': 4_294_967_295
+            'value': did_doc.SerializeToString().hex().encode('ascii'),
+            'valid_for': DIDUtils.VALID_FOR,
         }
     )
 

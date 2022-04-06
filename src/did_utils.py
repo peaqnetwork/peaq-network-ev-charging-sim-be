@@ -5,6 +5,7 @@ import json
 
 
 VERSION = 'v2'
+VALID_FOR = 4_294_967_295
 
 
 def decode_did_event(did: dict) -> DIDMessage.Document:
