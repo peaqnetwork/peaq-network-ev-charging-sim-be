@@ -1,11 +1,11 @@
 import datetime
 
 
-def _calculate_spent_tokens(charging_period: datetime.datetime, token_deposit: int) -> (int, int):
-    if charging_period.total_seconds() > 60:
+def _calculate_spent_tokens(charging_period: int, charging_wait_time: int, token_deposit: int) -> (int, int):
+    if charging_period > charging_wait_time:
         spent_token = token_deposit
     else:
-        spent_token = int((token_deposit - 1) * (charging_period.total_seconds() / 60.0) + 1)
+        spent_token = int((token_deposit - 1) * (charging_period / charging_wait_time) + 1)
     return spent_token, token_deposit - spent_token
 
 
@@ -15,10 +15,11 @@ def _calculate_energy_consumption(charging_period: datetime.datetime) -> float:
 
 def calculate_charging_result(charging_start_time: datetime.datetime,
                               charging_end_time: datetime.datetime,
+                              charging_wait_time: int,
                               token_deposit: int) -> dict:
     charging_period = charging_end_time - charging_start_time
 
-    spent_token, refund_token = _calculate_spent_tokens(charging_period, token_deposit)
+    spent_token, refund_token = _calculate_spent_tokens(charging_period.total_seconds(), charging_wait_time, token_deposit)
     energy_consumption = _calculate_energy_consumption(charging_period)
 
     return {
