@@ -66,7 +66,7 @@ def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, kp_consumer: 
 
 def send_service_request(substrate: SubstrateInterface, kp_consumer: Keypair,
                          kp_provider: Keypair, token_num: int):
-    logging.info('----- Consumer sends the serviice requested to peaq-transaction')
+    logging.info('----- Consumer sends the service requested to peaq-transaction')
     nonce = substrate.get_account_nonce(kp_consumer.ss58_address)
     call = substrate.compose_call(
         call_module='Transaction',
