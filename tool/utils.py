@@ -7,7 +7,7 @@ sys.path.append(BASE_DIR)
 from substrateinterface import SubstrateInterface, Keypair
 from src import chain_utils as ChainUtils
 
-TOKEN_NUM_BASE = 10 ** 19
+TOKEN_NUM_BASE = 10 ** 5
 
 
 def fund(substrate: SubstrateInterface, kp_dst: Keypair, kp_sudo: Keypair, token_num: int):
