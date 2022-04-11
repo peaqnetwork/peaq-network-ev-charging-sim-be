@@ -76,6 +76,7 @@ class BusinessLogic():
         charging_result = CharginUtils.calculate_charging_result(
             self._charging_info['charging_start_time'],
             now_time,
+            self._charging_info['charing_wait_time'],
             self._charging_info['deposit_token']
         )
         progress = CharginUtils.calculate_charging_status(
@@ -296,6 +297,7 @@ class BusinessLogic():
             charging_result = CharginUtils.calculate_charging_result(
                 self._charging_info['charging_start_time'],
                 self._charging_info['charging_end_time'],
+                self._charging_info['charing_wait_time'],
                 self._charging_info['deposit_token']
             )
             spent_token = charging_result['spent_token']
