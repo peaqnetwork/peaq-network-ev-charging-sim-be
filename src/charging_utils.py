@@ -27,3 +27,13 @@ def calculate_charging_result(charging_start_time: datetime.datetime,
         'charging_period': charging_period,
         'energy_consumption': energy_consumption
     }
+
+
+def calculate_charging_status(start: datetime.datetime, now: datetime.datetime, interval: int) -> float:
+    if now < start:
+        return 0
+
+    seconds = (now - start).total_seconds()
+    if seconds > interval:
+        return 100
+    return seconds / float(interval) * 100

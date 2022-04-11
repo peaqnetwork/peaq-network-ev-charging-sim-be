@@ -3,7 +3,6 @@ import datetime
 import logging
 import redis
 
-from substrateinterface import Keypair
 from substrateinterface.utils.ss58 import ss58_encode
 import transitions
 from src.chain_utils import calculate_multi_sig, send_token_multisig_wallet
@@ -16,22 +15,27 @@ from peaq_network_ev_charging_message_format.python import p2p_message_format_pb
 from src.constants import REDIS_OUT, REDIS_IN
 
 
-def run_business_logic(ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger):
-    business_logic = BusinessLogic(ws_url, kp, r, logger)
+def run_business_logic(r: redis.Redis, logger: logging.Logger, config: dict):
+    business_logic = BusinessLogic(r, logger, config)
     business_logic.start()
 
 
 class BusinessLogic():
     states = ['idle', 'verified', 'charging', 'charged', 'approving']
 
-    def __init__(self, ws_url: str, kp: Keypair, r: redis.Redis, logger: logging.Logger):
-        self._substrate = ChainUtils.get_substrate_connection(ws_url)
+    def __init__(self, r: redis.Redis, logger: logging.Logger, config: dict):
+        self._logger = logger
+        self._redis = r
+        self._ws_url = config['node_ws']
+        self._wait_time = config['charging_time']
+        self._kp = config['kp_provider']
+
+        self._substrate = ChainUtils.get_substrate_connection(self._ws_url)
         self._machine = transitions.Machine(
             model=self,
             states=BusinessLogic.states,
             initial='idle'
         )
-        self._kp = kp
         self._multi_threshold = 2
 
         self._machine.add_transition(trigger='check', source='idle', dest='verified',
@@ -41,10 +45,6 @@ class BusinessLogic():
         self._machine.add_transition(trigger='wait_approval', source='charged', dest='approving')
         self._machine.add_transition(trigger='receive_approvals', source='approving', dest='idle')
         self._machine.on_enter_idle('reset')
-
-        self._logger = logger
-        self._redis = r
-        self._ws_url = ws_url
 
         self.reset()
 
@@ -64,7 +64,30 @@ class BusinessLogic():
             'spent_token': 0,
             'refund_token': 0,
             'charging_start_time': None,
+            'charing_wait_time': 0,
             'charging_end_time': None,
+        }
+
+    def update_charging_start(self, start_time: datetime.datetime, wait_time: int):
+        self._charging_info['charging_start_time'] = start_time
+        self._charging_info['charing_wait_time'] = wait_time
+
+    def calculate_charging_status_data(self, now_time: datetime.datetime) -> dict:
+        charging_result = CharginUtils.calculate_charging_result(
+            self._charging_info['charging_start_time'],
+            now_time,
+            self._charging_info['deposit_token']
+        )
+        progress = CharginUtils.calculate_charging_status(
+            self._charging_info['charging_start_time'],
+            now_time,
+            self._charging_info['charing_wait_time']
+        )
+        return {
+            'charging_period': str(charging_result['charging_period']),
+            'energy_consumption': charging_result['energy_consumption'],
+            'spent_token': charging_result['spent_token'],
+            'progress': progress,
         }
 
     def is_all_approvals(self) -> bool:
@@ -124,6 +147,11 @@ class BusinessLogic():
 
     def emit_service_delivered(self, data: dict):
         named_data = {'event': 'ServiceDelivered', 'state': self.state}
+        named_data.update(data)
+        self.emit_event(named_data)
+
+    def emit_client_charging_status(self, data: dict):
+        named_data = {'event': 'ChargingStatus', 'state': self.state}
         named_data.update(data)
         self.emit_event(named_data)
 
@@ -344,14 +372,17 @@ class BusinessLogic():
                     self._multi_threshold),
             })
 
+            wait_time = self._wait_time
+            self._logger.info(f'⚠️  wait for {wait_time} to finish the charging')
+
             # [TODO] We should change the API type and the naming...
             self.emit_service_requested({
                 'provider': self._kp.ss58_address,
                 'consumer': self._charging_info['consumer'],
                 'token_deposited': self._charging_info['deposit_token'],
+                'wait_time': wait_time,
             })
             self.emit_log({'state': self.state, 'data': 'ServiceRequested received'})
-            P2PUtils.send_request_ack(self._redis, 'ServiceRequested received')
 
             self.check(self._charging_info)
             if self.is_idle():
@@ -362,7 +393,10 @@ class BusinessLogic():
                     'token_deposited': self._charging_info['deposit_token'],
                     'success': False,
                 })
+                P2PUtils.send_request_ack(self._redis, wait_time, 'Deposit check fail', False)
                 return
+
+            P2PUtils.send_request_ack(self._redis, wait_time, 'ServiceRequested received', True)
             # [TODO] We should change the API type and the naming...
             self.emit_deposit_verified({
                 'consumer': self._charging_info['consumer'],
@@ -371,10 +405,21 @@ class BusinessLogic():
             })
             self.emit_log({'state': self.state, 'data': 'Check verified'})
 
-            self._charging_info['charging_start_time'] = datetime.datetime.now()
+            self.update_charging_start(datetime.datetime.now(), wait_time)
             self.start_charging()
             self._logger.info('started charging')
             self.emit_log({'state': self.state, 'data': 'Charging start'})
+
+        if event.event_id == P2PMessage.EventType.CHARGING_STATUS:
+            now_time = datetime.datetime.now()
+            charging_status_data = self.calculate_charging_status_data(now_time)
+            self.emit_client_charging_status(charging_status_data)
+            self.emit_log({
+                'state': self.state,
+                'data': f'Charging status: {charging_status_data}'
+            })
+            P2PUtils.send_client_charging_status(self._redis, charging_status_data['progress'])
+
         self._logger.info(f'Event: {event}')
 
     def start(self):
