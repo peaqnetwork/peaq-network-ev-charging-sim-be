@@ -111,16 +111,19 @@ def create_server_charging_status():
     return event.SerializeToString().hex()
 
 
-def _create_client_charging_status(progress: float):
+def _create_client_charging_status(progress: float, charging_period: int, energy_consumption: float, token_spent: int):
     event = P2PMessage.Event()
     event.event_id = P2PMessage.EventType.CHARGING_STATUS
     charging_status_data = P2PMessage.ChargingStatusData()
     charging_status_data.progress = progress
+    charging_status_data.charging_period = charging_period
+    charging_status_data.energy_consumption = str(energy_consumption)
+    charging_status_data.token_spent = str(token_spent)
     event.charging_status_data.CopyFrom(charging_status_data)
 
     return event.SerializeToString().hex()
 
 
-def send_client_charging_status(redis, progress: float):
-    event = _create_client_charging_status(progress)
+def send_client_charging_status(redis, progress: float, charging_period: str, energy_consumption: float, token_spent: int):
+    event = _create_client_charging_status(progress, charging_period, energy_consumption, token_spent)
     redis.publish(REDIS_OUT, event.encode('ascii'))

@@ -420,7 +420,12 @@ class BusinessLogic():
                 'state': self.state,
                 'data': f'Charging status: {charging_status_data}'
             })
-            P2PUtils.send_client_charging_status(self._redis, charging_status_data['progress'])
+            P2PUtils.send_client_charging_status(
+                self._redis,
+                charging_status_data['progress'],
+                charging_status_data['charging_period'],
+                charging_status_data['energy_consumption'],
+                charging_status_data['spent_token'])
 
         self._logger.info(f'Event: {event}')
 
