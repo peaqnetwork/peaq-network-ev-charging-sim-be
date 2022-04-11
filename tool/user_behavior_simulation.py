@@ -95,14 +95,14 @@ def user_simulation_test(ws_url: str,
         sio.disconnect()
 
         # Fund first
-        ToolUtils.fund(substrate, kp_consumer, kp_sudo, 500)
-        ToolUtils.fund(substrate, kp_provider, kp_sudo, 500)
+        # ToolUtils.fund(substrate, kp_consumer, kp_sudo, 500)
+        # ToolUtils.fund(substrate, kp_provider, kp_sudo, 500)
 
         token_num = token_deposit * ToolUtils.TOKEN_NUM_BASE
         ToolUtils.deposit_money_to_multsig_wallet(substrate, kp_consumer, kp_provider, token_num)
         if not p2p_flag:
             ToolUtils.send_service_request(substrate, kp_consumer, kp_provider, token_num)
-            P2PUtils.send_service_request(r, kp_consumer, kp_provider.ss58_address, 10)
+            P2PUtils.send_service_request(r, kp_consumer, kp_provider.ss58_address, token_num)
             logging.info('---- Start charging and wait')
         else:
             logging.info('⚠️ ⚠️ ⚠️  Please send the service request!!')
