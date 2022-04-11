@@ -24,12 +24,12 @@ RUNTIME_ENV = 'RUNTIME_ENV'
 RUNTIME_DEFAULT = 'dev'
 
 
-def create_main_logic(socketio: SocketIO, r: redis.Redis, logger: logging.Logger, config: dict):
+def create_main_logic(socketio: SocketIO, r: redis.Redis, logger: logging.Logger, config: dict, did_path: str):
     thread_utils.install(logger)
 
-    monitor_thread = Thread(target=run_substrate_monitor, args=(config['node_ws'], r,))
+    monitor_thread = Thread(target=run_substrate_monitor, args=(config['node_ws'], r))
     business_logic_thread = Thread(target=run_business_logic,
-                                   args=(r, logger, config))
+                                   args=(r, logger, config, did_path))
     read_redis_thread = Thread(target=app.redis_reader, args=(socketio, r))
     charging_monitor_thread = Thread(target=charging_status_monitor.run,
                                      args=(r, logger))
@@ -61,6 +61,8 @@ def parse_arguement():
                         type=str, default='etc/logger.yaml')
     parser.add_argument('--rconfig', help='redis config yaml file',
                         type=str, default='etc/redis.yaml')
+    parser.add_argument('--did_path', help='did document path',
+                        type=str, default='etc/did_doc.json')
     return parser.parse_args()
 
 
@@ -92,5 +94,5 @@ if __name__ == '__main__':
             'node_ws': args.node_ws,
             'charging_time': args.charging_time,
             'kp_provider': kp_provider
-        })
+        }, args.did_path)
     socketio.run(be, debug=False, host=args.url, port=args.port)

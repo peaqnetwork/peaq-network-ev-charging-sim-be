@@ -24,11 +24,11 @@ class TestBSLogic(unittest.TestCase):
         p2p_event = UserUtils.decode_hex_event(p2p_info.SerializeToString().hex())
         self.assertEqual(p2p_info, p2p_event)
 
-    @mock.patch('src.utils.get_substrate_connection')
+    @mock.patch('src.chain_utils.get_substrate_connection')
     def test_is_service_requested_event_true(self, mock_get_conn):
         mock_get_conn.return_value = None
 
-        bs = BusinessLogic('', None, None, None)
+        bs = BusinessLogic('', None, None, None, None)
         kp = Keypair.create_from_uri('//Alice')
 
         p2p_info = P2PMessage.Event()
@@ -40,11 +40,11 @@ class TestBSLogic(unittest.TestCase):
 
         self.assertTrue(bs.is_service_requested_event(p2p_info, kp.ss58_address))
 
-    @mock.patch('src.utils.get_substrate_connection')
+    @mock.patch('src.chain_utils.get_substrate_connection')
     def test_is_service_requested_event_false(self, mock_get_conn):
         mock_get_conn.return_value = None
 
-        bs = BusinessLogic('', None, None, None)
+        bs = BusinessLogic('', None, None, None, None)
 
         p2p_info = P2PMessage.Event()
         p2p_info.event_id = P2PMessage.EventType.SERVICE_REQUESTED

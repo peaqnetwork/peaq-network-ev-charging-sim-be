@@ -1,17 +1,15 @@
 import yaml
 import logging
-import re
 import redis
 import json
 import time
 
-from substrateinterface import SubstrateInterface, Keypair
+from substrateinterface import SubstrateInterface, Keypair, ExtrinsicReceipt
 from substrateinterface.utils.ss58 import ss58_encode
 from scalecodec.base import RuntimeConfiguration
 from scalecodec.type_registry import load_type_registry_preset
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
-
-version = 'v2'
+from src import did_utils as DIDUtils
 
 RETRY_TIMES = 200
 RETRY_PERIOD = 3
@@ -230,46 +228,21 @@ def send_service_deliver(substrate: SubstrateInterface, kp: Keypair,
     show_extrinsic(receipt, 'service_delivered', logger)
 
 
-def _compose_did(kp: Keypair):
-    did = '''{"id": "did:peaq:%s",
-      "controller": "did:peaq:%s",
-      "verificationMethod": [
-        {
-            "id": "%s",
-            "type": "Sr25519VerificationKey2019",
-            "controller": "did:peaq:%s",
-            "publicKeyMultibase": "%s" 
-        }
-      ],
-      "service": [
-        {
-            "id": "%s",
-            "type": "payment",
-            "serviceEndpoint": "%s"
-        }
-      ],
-      "authentication": [
-        "%s"
-      ]
-    }''' % (kp.ss58_address, kp.ss58_address, kp.public_key.hex(), kp.ss58_address,
-            kp.ss58_address, kp.ss58_address, kp.ss58_address, kp.public_key.hex())
-
-    return re.sub(r'[\n\t\s]*', '', did)
-
-
-def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
+def publish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logger: logging.Logger) -> ExtrinsicReceipt:
     nonce = get_account_nonce(substrate, kp.ss58_address, logger)
 
-    did = _compose_did(kp)
+    did_doc = DIDUtils.load_did(did_path)
+    if not DIDUtils.is_my_did(did_doc, kp.ss58_address):
+        raise IOError(f'the default did {did_doc} does not belong to {kp.ss58_address}')
 
     call = substrate.compose_call(
         call_module='PeaqDid',
         call_function='add_attribute',
         call_params={
             'did_account': kp.ss58_address,
-            'name': version,
-            'value': did,
-            'valid_for': 20
+            'name': DIDUtils.VERSION,
+            'value': did_doc.SerializeToString().hex().encode('ascii'),
+            'valid_for': DIDUtils.VALID_FOR,
         }
     )
 
@@ -284,19 +257,21 @@ def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logg
     return receipt
 
 
-def republish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
+def republish_did(substrate: SubstrateInterface, kp: Keypair, did_path: str, logger: logging.Logger) -> ExtrinsicReceipt:
     nonce = get_account_nonce(substrate, kp.ss58_address, logger)
 
-    did = _compose_did(kp)
+    did_doc = DIDUtils.load_did(did_path)
+    if not DIDUtils.is_my_did(did_doc, kp.ss58_address):
+        raise IOError(f'the default did {did_doc} does not belong to {kp.ss58_address}')
 
     call = substrate.compose_call(
         call_module='PeaqDid',
         call_function='update_attribute',
         call_params={
             'did_account': kp.ss58_address,
-            'name': version,
-            'value': did,
-            'valid_for': 20
+            'name': DIDUtils.VERSION,
+            'value': did_doc.SerializeToString().hex().encode('ascii'),
+            'valid_for': DIDUtils.VALID_FOR,
         }
     )
 
@@ -311,7 +286,7 @@ def republish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Lo
     return receipt
 
 
-def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
+def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger) -> ExtrinsicReceipt:
     nonce = get_account_nonce(substrate, kp.ss58_address, logger)
 
     call = substrate.compose_call(
@@ -319,7 +294,7 @@ def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger)
         call_function='read_attribute',
         call_params={
             'did_account': kp.ss58_address,
-            'name': version,
+            'name': DIDUtils.VERSION,
         }
     )
 
@@ -334,7 +309,7 @@ def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger)
     return receipt
 
 
-def decode_chain_event(event: dict) -> P2PMessage.Event:
+def decode_chain_event(event: str) -> P2PMessage.Event:
     user_info = P2PMessage.Event()
     user_info.ParseFromString(bytes.fromhex(event))
     return user_info
