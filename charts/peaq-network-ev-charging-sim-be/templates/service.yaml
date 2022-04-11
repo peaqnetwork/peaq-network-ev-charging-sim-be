@@ -27,3 +27,33 @@ spec:
   selector:
     app: {{ template "fullname" . }}
 {{- end }}
+---
+{{- if or .Values.knativeDeploy .Values.canary.enabled }}
+{{- else }}
+apiVersion: v1
+kind: Service
+metadata:
+{{- if .Values.service_p2p.name }}
+  name: {{ .Values.service_p2p.name }}
+{{- else }}
+  name: {{ template "fullname" . }}
+{{- end }}
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+{{- if .Values.service_p2p.labels }}
+{{ toYaml .Values.service_p2p.labels | indent 4 }}
+{{- end }}
+{{- if .Values.service_p2p.annotations }}
+  annotations:
+{{ toYaml .Values.service_p2p.annotations | indent 4 }}
+{{- end }}
+spec:
+  type: {{ .Values.service_p2p.type }}
+  ports:
+  - port: {{ .Values.service_p2p.externalPort }}
+    targetPort: {{ .Values.service_p2p.internalPort }}
+    protocol: TCP
+    name: p2p
+  selector:
+    app: {{ template "fullname" . }}
+{{- end }}
