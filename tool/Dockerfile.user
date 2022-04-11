@@ -17,4 +17,4 @@ WORKDIR /peaq/simulator
 RUN pip3 install -r requirements.txt
 
 ENTRYPOINT [ "python3", "/peaq/simulator/tool/user_behavior_simulation.py" ]
-CMD [ "--node_ws", "wss://wss.test.peaq.network", "--p2p" ]
+CMD [ "--node_ws", "wss://wss.agung.peaq.network", "--p2p" ]
