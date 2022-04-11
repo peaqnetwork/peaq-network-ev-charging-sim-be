@@ -7,7 +7,7 @@ sys.path.append(BASE_DIR)
 from substrateinterface import SubstrateInterface, Keypair
 from src import chain_utils as ChainUtils
 
-TOKEN_NUM_BASE = 10 ** 19
+TOKEN_NUM_BASE = 10 ** 5
 
 
 def fund(substrate: SubstrateInterface, kp_dst: Keypair, kp_sudo: Keypair, token_num: int):
@@ -66,7 +66,7 @@ def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, kp_consumer: 
 
 def send_service_request(substrate: SubstrateInterface, kp_consumer: Keypair,
                          kp_provider: Keypair, token_num: int):
-    logging.info('----- Consumer sends the serviice requested to peaq-transaction')
+    logging.info('----- Consumer sends the service requested to peaq-transaction')
     nonce = ChainUtils.get_account_nonce(substrate, kp_consumer.ss58_address, logging.getLogger('logger'))
     call = substrate.compose_call(
         call_module='Transaction',
