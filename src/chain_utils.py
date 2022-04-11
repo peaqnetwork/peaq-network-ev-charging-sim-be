@@ -3,6 +3,7 @@ import logging
 import re
 import redis
 import json
+import time
 
 from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.utils.ss58 import ss58_encode
@@ -11,6 +12,9 @@ from scalecodec.type_registry import load_type_registry_preset
 from peaq_network_ev_charging_message_format.python import p2p_message_format_pb2 as P2PMessage
 
 version = 'v2'
+
+RETRY_TIMES = 200
+RETRY_PERIOD = 3
 
 
 def parse_config(path: str) -> Keypair:
@@ -97,6 +101,60 @@ def calculate_multi_sig(ss58_addrs: str, threshold: int) -> str:
     return ss58_encode(multi_sig_account.value)
 
 
+def submit_extrinsic(substrate: SubstrateInterface, extrinsic, logger):
+    for i in range(RETRY_TIMES):
+        try:
+            return substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+        except BrokenPipeError as err:
+            logger.error(f'failed to submit_extrinsic : {err}')
+            time.sleep(RETRY_PERIOD)
+            url = substrate.url
+            substrate.close()
+            substrate = get_substrate_connection(url)
+        except Exception as err:
+            logger.error(f'failed to submit_extrinsic : {err}')
+            time.sleep(RETRY_PERIOD)
+    raise IOError(f'After {RETRY_TIMES} times, still cannot submit extrinsic')
+
+
+def get_account_nonce(substrate: SubstrateInterface, ss58_addr: str, logger):
+    for i in range(RETRY_TIMES):
+        try:
+            return substrate.get_account_nonce(ss58_addr)
+        except BrokenPipeError as err:
+            logger.error(f'failed to get_account_nonce: {err}')
+            time.sleep(RETRY_PERIOD)
+            url = substrate.url
+            substrate.close()
+            substrate = get_substrate_connection(url)
+        except Exception as err:
+            logger.error(f'failed to get_account_nonce: {err}')
+            time.sleep(RETRY_PERIOD)
+    raise IOError(f'After {RETRY_TIMES} times, still cannot submit extrinsic')
+
+
+def get_station_balance(substrate: SubstrateInterface, ss58_addr: str, logger: logging.Logger):
+    for _ in range(RETRY_TIMES):
+        try:
+            account_info = substrate.query(
+                module='System',
+                storage_function='Account',
+                params=[ss58_addr],
+            )
+
+            return account_info['data']['free'].value
+        except BrokenPipeError as err:
+            logger.error(f'failed to get_station_balance: {err}')
+            time.sleep(RETRY_PERIOD)
+            url = substrate.url
+            substrate.close()
+            substrate = get_substrate_connection(url)
+        except Exception as err:
+            logger.error(f'failed to get_station_balance: {err}')
+            time.sleep(RETRY_PERIOD)
+    raise IOError(f'After {RETRY_TIMES} times, still cannot get the station balance')
+
+
 def send_token_multisig_wallet(substrate: SubstrateInterface, kp: Keypair,
                                token_num: int, dst_addr: str,
                                other_signatories: [str], threshold: int,
@@ -109,7 +167,7 @@ def send_token_multisig_wallet(substrate: SubstrateInterface, kp: Keypair,
             'value': token_num
         })
 
-    nonce = substrate.get_account_nonce(kp.ss58_address)
+    nonce = get_account_nonce(substrate, kp.ss58_address, logger)
 
     as_multi_call = substrate.compose_call(
         call_module='MultiSig',
@@ -130,7 +188,7 @@ def send_token_multisig_wallet(substrate: SubstrateInterface, kp: Keypair,
         nonce=nonce
     )
 
-    receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+    receipt = submit_extrinsic(substrate, extrinsic, logger)
     show_extrinsic(receipt, 'as_multi', logger)
     info = receipt.get_extrinsic_identifier().split('-')
     return {
@@ -151,7 +209,7 @@ def compose_delivery_info(token_num: int, info: dict) -> dict:
 
 def send_service_deliver(substrate: SubstrateInterface, kp: Keypair,
                          user_addr: str, refund_info: dict, spent_info: dict, logger: logging.Logger):
-    nonce = substrate.get_account_nonce(kp.ss58_address)
+    nonce = get_account_nonce(substrate, kp.ss58_address, logger)
     call = substrate.compose_call(
         call_module='Transaction',
         call_function='service_delivered',
@@ -168,7 +226,7 @@ def send_service_deliver(substrate: SubstrateInterface, kp: Keypair,
         nonce=nonce
     )
 
-    receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True,)
+    receipt = submit_extrinsic(substrate, extrinsic, logger)
     show_extrinsic(receipt, 'service_delivered', logger)
 
 
@@ -200,7 +258,7 @@ def _compose_did(kp: Keypair):
 
 
 def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
-    nonce = substrate.get_account_nonce(kp.ss58_address)
+    nonce = get_account_nonce(substrate, kp.ss58_address, logger)
 
     did = _compose_did(kp)
 
@@ -222,12 +280,12 @@ def publish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logg
         nonce=nonce
     )
 
-    receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+    receipt = submit_extrinsic(substrate, extrinsic, logger)
     return receipt
 
 
 def republish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
-    nonce = substrate.get_account_nonce(kp.ss58_address)
+    nonce = get_account_nonce(substrate, kp.ss58_address, logger)
 
     did = _compose_did(kp)
 
@@ -249,12 +307,12 @@ def republish_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Lo
         nonce=nonce
     )
 
-    receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+    receipt = submit_extrinsic(substrate, extrinsic, logger)
     return receipt
 
 
 def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
-    nonce = substrate.get_account_nonce(kp.ss58_address)
+    nonce = get_account_nonce(substrate, kp.ss58_address, logger)
 
     call = substrate.compose_call(
         call_module='PeaqDid',
@@ -272,18 +330,8 @@ def read_did(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger)
         nonce=nonce
     )
 
-    receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
+    receipt = submit_extrinsic(substrate, extrinsic, logger)
     return receipt
-
-
-def get_station_balance(substrate: SubstrateInterface, kp: Keypair, logger: logging.Logger):
-    account_info = substrate.query(
-        module='System',
-        storage_function='Account',
-        params=[kp.ss58_address],
-    )
-
-    return account_info['data']['free'].value
 
 
 def decode_chain_event(event: dict) -> P2PMessage.Event:
