@@ -15,6 +15,7 @@ import src.user_utils as UserUtils
 from src.chain_utils import parse_config, get_substrate_connection, generate_key_pair_from_mnemonic
 from src.chain_utils import parse_redis_config, init_redis
 from src.constants import REDIS_OUT
+from src import config_utils as ConfigUtils
 
 import utils as ToolUtils
 
@@ -35,8 +36,6 @@ def parse_arguement():
                         type=str, default='etc/config.yaml')
     parser.add_argument('--consumer_config', help='consumer config yaml file',
                         type=str, default='tool/consumer.config.yaml')
-    parser.add_argument('--sudo_config', help='sudo config yaml file',
-                        type=str, default='tool/sudo.config.yaml')
     parser.add_argument('--node_ws', help="peaq node's url",
                         type=str, default='ws://127.0.0.1:9944')
     parser.add_argument('--be_url', help="peaq charging simulator BE url",
@@ -83,7 +82,6 @@ def user_simulation_test(ws_url: str,
                          p2p_flag: bool,
                          kp_consumer: Keypair,
                          kp_provider: Keypair,
-                         kp_sudo: Keypair,
                          token_deposit: int):
     with get_substrate_connection(ws_url) as substrate:
         sio = socketio.Client()
@@ -93,10 +91,6 @@ def user_simulation_test(ws_url: str,
         get_pk(sio)
         get_balance(sio)
         sio.disconnect()
-
-        # Fund first
-        # ToolUtils.fund(substrate, kp_consumer, kp_sudo, 500)
-        # ToolUtils.fund(substrate, kp_provider, kp_sudo, 500)
 
         token_num = token_deposit * ToolUtils.TOKEN_NUM_BASE
         ToolUtils.deposit_money_to_multsig_wallet(substrate, kp_consumer, kp_provider, token_num)
@@ -216,13 +210,12 @@ if __name__ == '__main__':
         logging.error('⚠️  No target node running')
         sys.exit()
 
-    kp_sudo = parse_config(args.sudo_config)
     runtime_env = os.getenv(RUNTIME_ENV, RUNTIME_DEFAULT)
-    if (runtime_env == RUNTIME_DEFAULT):
-        kp_provider = parse_config(args.provider_config)
+    if runtime_env == RUNTIME_DEFAULT:
+        kp_provider = ConfigUtils.get_account_from_env('PROVIDER')
     else:
         kp_provider = generate_key_pair_from_mnemonic(args.provider_mnemonic)
-    kp_consumer = parse_config(args.consumer_config)
+    kp_consumer = ConfigUtils.get_account_from_env('CONSUMER')
 
     substrate_monitor = SubstrateMonitor(args.node_ws, kp_consumer, 2)
     monitor_thread = Thread(target=substrate_monitor.run_substrate_monitor)
@@ -241,7 +234,6 @@ if __name__ == '__main__':
             args.p2p,
             kp_consumer,
             kp_provider,
-            kp_sudo,
             args.deposit_token
         )
     except ConnectionRefusedError:

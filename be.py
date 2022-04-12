@@ -9,11 +9,12 @@ import eventlet
 from src import app
 from src.bs_logic import run_business_logic
 from src.substrate_monitor import run_substrate_monitor
-from src.chain_utils import get_substrate_connection, parse_config, parse_logger_config, generate_key_pair, parse_redis_config, init_redis
+from src.chain_utils import get_substrate_connection, parse_logger_config, generate_key_pair, parse_redis_config, init_redis
 from flask_socketio import SocketIO
 from src.logger import init_logger
 from src import thread_utils
 from src import charging_status_monitor
+from src import config_utils as ConfigUtils
 
 eventlet.monkey_patch()
 
@@ -47,8 +48,6 @@ def create_main_logic(socketio: SocketIO, r: redis.Redis, logger: logging.Logger
 
 def parse_arguement():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', help='config yaml file',
-                        type=str, default='etc/config.yaml')
     parser.add_argument('--url', help='backend service url',
                         type=str, default='127.0.0.1')
     parser.add_argument('--port', help='backend service port',
@@ -83,8 +82,9 @@ if __name__ == '__main__':
         sys.exit()
 
     runtime_env = os.getenv(RUNTIME_ENV, RUNTIME_DEFAULT)
-    if (runtime_env == RUNTIME_DEFAULT):
-        kp_provider = parse_config(args.config)
+    if runtime_env == RUNTIME_DEFAULT:
+        # Check PROVIDER_URI and PROVIDER_MNEMONIC
+        kp_provider = ConfigUtils.get_account_from_env('PROVIDER')
     else:
         kp_provider = generate_key_pair(logger)
 
