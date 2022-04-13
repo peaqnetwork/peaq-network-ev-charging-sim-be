@@ -45,10 +45,18 @@ spec:
         env:
         - name: VERSION
           value: {{ .Chart.Version }}
-        - name: PROVIDER_MNEMONIC
-          value: "nature exchange gasp toy result bacon coin broccoli rule oyster believe lyrics"
-        - name: CONSUMER_MNEMONIC
-          value: "disagree tonight dawn fuel ask tent decorate fault maximum leave abuse weird"
+        - name: "PROVIDER_MNEMONIC"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Values.simbeSecrets.name }}"
+              key: PROVIDER_MNEMONIC
+              optional: false
+        - name: "CONSUMER_MNEMONIC"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Values.simbeSecrets.name }}"
+              key: PROVIDER_MNEMONIC
+              optional: false
 {{- range $pkey, $pval := .Values.env }}
         - name: {{ $pkey }}
           value: {{ quote $pval }}
@@ -98,18 +106,6 @@ spec:
               secretKeyRef:
                 name: "{{ .Values.simbeSecrets.name }}"
                 key: sk
-                optional: false
-          - name: "PROVIDER_MNEMONIC"
-            valueFrom:
-              secretKeyRef:
-                name: "{{ .Values.simbeSecrets.name }}"
-                key: PROVIDER_MNEMONIC
-                optional: false
-          - name: "CONSUMER_MNEMONIC"
-            valueFrom:
-              secretKeyRef:
-                name: "{{ .Values.simbeSecrets.name }}"
-                key: PROVIDER_MNEMONIC
                 optional: false
         envFrom: null
         ports:
