@@ -25,12 +25,12 @@ RUNTIME_ENV = 'RUNTIME_ENV'
 RUNTIME_DEFAULT = 'dev'
 
 
-def create_main_logic(socketio: SocketIO, r: redis.Redis, logger: logging.Logger, config: dict, did_path: str):
+def create_main_logic(socketio: SocketIO, r: redis.Redis, logger: logging.Logger, config: dict):
     thread_utils.install(logger)
 
     monitor_thread = Thread(target=run_substrate_monitor, args=(config['node_ws'], r))
     business_logic_thread = Thread(target=run_business_logic,
-                                   args=(r, logger, config, did_path))
+                                   args=(r, logger, config))
     read_redis_thread = Thread(target=app.redis_reader, args=(socketio, r))
     charging_monitor_thread = Thread(target=charging_status_monitor.run,
                                      args=(r, logger))
@@ -93,6 +93,7 @@ if __name__ == '__main__':
         create_main_logic, socketio, redis, logger, {
             'node_ws': args.node_ws,
             'charging_time': args.charging_time,
-            'kp_provider': kp_provider
-        }, args.did_path)
+            'kp_provider': kp_provider,
+            'did_path': args.did_path,
+        })
     socketio.run(be, debug=False, host=args.url, port=args.port)
