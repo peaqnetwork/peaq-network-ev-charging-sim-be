@@ -90,12 +90,23 @@ spec:
           - name: "port"
             value: "{{ .Values.service_p2p.internalPort }}"
           - name: "sk"
-            value: "71b28bbd45fe04f07200190180f14ba0fe3dd903eb70b6a34ee16f9f463cfd10"
-            # valueFrom:
-            #   secretKeyRef:
-            #     name: "{{ .Values.simp2pSecrets.name }}"
-            #     key: sk
-            #     optional: false
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Values.simbeSecrets.name }}"
+                key: sk
+                optional: false
+          - name: "PROVIDER_MNEMONIC"
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Values.simbeSecrets.name }}"
+                key: PROVIDER_MNEMONIC
+                optional: false
+          - name: "CONSUMER_MNEMONIC"
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Values.simbeSecrets.name }}"
+                key: PROVIDER_MNEMONIC
+                optional: false
         envFrom: null
         ports:
         - name: p2p
