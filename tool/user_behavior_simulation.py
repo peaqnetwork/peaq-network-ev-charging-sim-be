@@ -12,7 +12,7 @@ from substrateinterface import Keypair
 import src.p2p_utils as P2PUtils
 import src.user_utils as UserUtils
 
-from src.chain_utils import parse_config, get_substrate_connection, generate_key_pair_from_mnemonic
+from src.chain_utils import get_substrate_connection, generate_key_pair_from_mnemonic
 from src.chain_utils import parse_redis_config, init_redis
 from src.constants import REDIS_OUT
 from src import config_utils as ConfigUtils
