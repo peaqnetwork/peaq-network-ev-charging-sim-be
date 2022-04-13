@@ -45,6 +45,10 @@ spec:
         env:
         - name: VERSION
           value: {{ .Chart.Version }}
+        - name: PROVIDER_MNEMONIC
+          value: "nature exchange gasp toy result bacon coin broccoli rule oyster believe lyrics"
+        - name: CONSUMER_MNEMONIC
+          value: "disagree tonight dawn fuel ask tent decorate fault maximum leave abuse weird"
 {{- range $pkey, $pval := .Values.env }}
         - name: {{ $pkey }}
           value: {{ quote $pval }}
@@ -90,12 +94,23 @@ spec:
           - name: "port"
             value: "{{ .Values.service_p2p.internalPort }}"
           - name: "sk"
-            value: "db569165db0195a34d9c71df23a7584926f685388b4c16234dcc8336fd970186"
-            # valueFrom:
-            #   secretKeyRef:
-            #     name: "{{ .Values.simp2pSecrets.name }}"
-            #     key: sk
-            #     optional: false
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Values.simbeSecrets.name }}"
+                key: sk
+                optional: false
+          - name: "PROVIDER_MNEMONIC"
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Values.simbeSecrets.name }}"
+                key: PROVIDER_MNEMONIC
+                optional: false
+          - name: "CONSUMER_MNEMONIC"
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Values.simbeSecrets.name }}"
+                key: PROVIDER_MNEMONIC
+                optional: false
         envFrom: null
         ports:
         - name: p2p
