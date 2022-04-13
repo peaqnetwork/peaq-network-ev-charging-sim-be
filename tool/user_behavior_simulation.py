@@ -87,7 +87,7 @@ def user_simulation_test(ws_url: str,
         sio = socketio.Client()
         sio.connect(be_url)
         reconnect(sio)
-        republish_did(sio)
+        # republish_did(sio)
         get_pk(sio)
         get_balance(sio)
         sio.disconnect()
