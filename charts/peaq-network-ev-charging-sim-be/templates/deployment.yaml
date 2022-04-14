@@ -55,7 +55,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: "{{ .Values.simbeSecrets.name }}"
-              key: PROVIDER_MNEMONIC
+              key: CONSUMER_MNEMONIC
               optional: false
 {{- range $pkey, $pval := .Values.env }}
         - name: {{ $pkey }}
