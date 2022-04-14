@@ -16,21 +16,21 @@ from peaq_network_ev_charging_message_format.python import p2p_message_format_pb
 from src.constants import REDIS_OUT, REDIS_IN
 
 
-def run_business_logic(r: redis.Redis, logger: logging.Logger, config: dict, did_path: str):
-    business_logic = BusinessLogic(r, logger, config, did_path)
+def run_business_logic(r: redis.Redis, logger: logging.Logger, config: dict):
+    business_logic = BusinessLogic(r, logger, config)
     business_logic.start()
 
 
 class BusinessLogic():
     states = ['idle', 'verified', 'charging', 'charged', 'approving']
 
-    def __init__(self, r: redis.Redis, logger: logging.Logger, config: dict, did_path: str):
+    def __init__(self, r: redis.Redis, logger: logging.Logger, config: dict):
         self._logger = logger
         self._redis = r
         self._ws_url = config['node_ws']
         self._wait_time = config['charging_time']
         self._kp = config['kp_provider']
-        self._did_path = did_path
+        self._did_path = config['did_path']
 
         self._substrate = ChainUtils.get_substrate_connection(self._ws_url)
         self._machine = transitions.Machine(
