@@ -8,9 +8,8 @@ podAnnotations: {}
 podsLabels: {}
 # Add labels to the deployment
 deploymentLabels: {}
-simp2pSecrets:
-  namespace: default
-  name: secret-sim-be-p2p
+simbeSecrets:
+  name: simulator-be
 image:
   repository: draft
   tag: dev
@@ -143,5 +142,3 @@ jxRequirements:
       enabled: false
       production: false
       secretName: ""
-
-
