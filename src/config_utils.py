@@ -8,5 +8,10 @@ def get_account_from_env(prefix: str) -> str:
         data = os.environ.get(key)
         if not data:
             continue
-        return func(data)
+        try:
+            return func(data)
+        except Exception as e:
+            print(e)
+            print(data)
+            raise
     raise IOError('please setup the provider secret key')
