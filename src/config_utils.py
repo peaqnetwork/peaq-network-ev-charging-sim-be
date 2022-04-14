@@ -9,7 +9,7 @@ def get_account_from_env(prefix: str) -> str:
         if not data:
             continue
         try:
-            return func(data)
+            return func(data.replace('"', ''))
         except Exception as e:
             print(e)
             print(data)
