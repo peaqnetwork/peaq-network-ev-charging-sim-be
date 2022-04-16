@@ -107,6 +107,12 @@ spec:
                 name: "{{ .Values.simbeSecrets.name }}"
                 key: sk
                 optional: false
+          - name: "CONSUMER_MNEMONIC"
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Values.simbeSecrets.name }}"
+                key: CONSUMER_MNEMONIC
+                optional: false
         envFrom: null
         ports:
         - name: p2p
