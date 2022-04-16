@@ -4,7 +4,7 @@ spec:
   presubmits:
   - name: pr
     context: "pr"
-    always_run: false
+    always_run: true
     optional: false
     source: "pullrequest.yaml"
     ignore_changes: "OWNERS"
