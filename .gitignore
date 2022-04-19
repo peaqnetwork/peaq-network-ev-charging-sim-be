@@ -62,7 +62,7 @@ coverage.xml
 # Simulator logs
 logs/
 backend/etc/log*
-etc/log
+etc/log*
 
 # Test cases
 test/tmp

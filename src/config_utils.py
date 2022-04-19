@@ -8,5 +8,5 @@ def get_account_from_env(prefix: str) -> str:
         data = os.environ.get(key)
         if not data:
             continue
-        return func(data)
+        return func(data.replace('"', ''))
     raise IOError('please setup the provider secret key')
