@@ -4,6 +4,10 @@ The project is split into a backend and frontend.
 Please checkin the code into the appropriate folder.
 
 
+## Mnemonic
+Currently, because of security, users need to assign the mnemonic at their environemnt varialbes, PROVIDER_MNEMONIC and CONSUMER_MNEMONIC. Users can also use the PROVIDER_URI and CONSUMER_URI to apply for the development. They URI has higher prority than MNEMONIC. Besides, due to avoiding the limitation of deployment environment, please use double quote on the environment variable.
+For example: PROVIDER_MNEMONIC="word1 word2 word3"
+
 ## Backend Service
 In current implementation
 
