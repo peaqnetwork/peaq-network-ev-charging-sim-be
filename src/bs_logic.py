@@ -470,8 +470,6 @@ class BusinessLogic():
                 self.emit_log({
                     'desc': 'Broken pipe happens, please check',
                 })
-            except Exception:
-                self._logger.error('exception happenes', exc_info=True)
 
     def reconnect(self):
         try:
