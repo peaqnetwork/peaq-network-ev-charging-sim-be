@@ -466,9 +466,12 @@ class BusinessLogic():
             try:
                 self.process_event(event)
             except BrokenPipeError:
+                self._logger.error('detail: broken pipe error', exc_info=True)
                 self.emit_log({
                     'desc': 'Broken pipe happens, please check',
                 })
+            except Exception:
+                self._logger.error('exception happenes', exc_info=True)
 
     def reconnect(self):
         try:
