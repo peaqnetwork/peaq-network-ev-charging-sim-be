@@ -466,6 +466,7 @@ class BusinessLogic():
             try:
                 self.process_event(event)
             except BrokenPipeError:
+                self._logger.error('detail: broken pipe error', exc_info=True)
                 self.emit_log({
                     'desc': 'Broken pipe happens, please check',
                 })
