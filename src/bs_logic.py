@@ -97,7 +97,7 @@ class BusinessLogic():
         return self._charging_info['consumer_got'] and self._charging_info['provider_got']
 
     def is_allow_charging(self, data: dict) -> bool:
-        token = get_station_balance(self._substrate, data['multisig_pk'], self._logger)
+        token = get_station_balance(self._substrate, self._logger, data['multisig_pk'])
         return token >= data['deposit_token']
 
     def is_service_requested_event(self, p2p_event: P2PMessage.Event, interested_addr: str) -> bool:
@@ -167,7 +167,7 @@ class BusinessLogic():
         did_exist = False
         try:
             self._logger.info('reading did...')
-            r = read_did(self._substrate, self._kp, self._logger)
+            r = read_did(self._substrate, self._logger, self._kp)
             if r.is_success and \
                len([_ for _ in r.triggered_events if _.value['event_id'] == 'AttributeRead']):
                 did_exist = True
@@ -176,9 +176,9 @@ class BusinessLogic():
 
         try:
             if did_exist:
-                receipt = republish_did(self._substrate, self._kp, self._did_path, self._logger)
+                receipt = republish_did(self._substrate, self._logger, self._kp, self._did_path)
             else:
-                receipt = publish_did(self._substrate, self._kp, self._did_path, self._logger)
+                receipt = publish_did(self._substrate, self._logger, self._kp, self._did_path)
 
             if receipt.is_success:
                 data = UserUtils.create_republish_did_ack(
@@ -266,7 +266,7 @@ class BusinessLogic():
 
         if event.event_id == P2PMessage.GET_BALANCE:
             try:
-                balance = get_station_balance(self._substrate, self._kp.ss58_address, self._logger)
+                balance = get_station_balance(self._substrate, self._logger, self._kp.ss58_address)
                 data = UserUtils.create_get_balance_ack(str(balance), True, '')
                 self.emit_out(data)
             except Exception as e:
@@ -320,16 +320,16 @@ class BusinessLogic():
 
             # Send the spent + delivier
             spent_info = send_token_multisig_wallet(
-                self._substrate, self._kp,
-                spent_token, self._kp.ss58_address,
-                [self._charging_info['consumer']], self._multi_threshold, self._logger)
+                self._substrate, self._logger,
+                self._kp, spent_token, self._kp.ss58_address,
+                [self._charging_info['consumer']], self._multi_threshold)
             self.emit_log({'state': self.state, 'data': 'Charging sends spent for multisig'})
 
             # Send the refund + delivier
             refund_info = send_token_multisig_wallet(
-                self._substrate, self._kp,
-                refund_token, self._charging_info['consumer'],
-                [self._charging_info['consumer']], self._multi_threshold, self._logger)
+                self._substrate, self._logger,
+                self._kp, refund_token, self._charging_info['consumer'],
+                [self._charging_info['consumer']], self._multi_threshold)
             self.emit_log({'state': self.state, 'data': 'Charging sends refund for multisig'})
 
             self._charging_info.update({
@@ -338,9 +338,9 @@ class BusinessLogic():
             })
 
             ChainUtils.send_service_deliver(
-                self._substrate, self._kp, self._charging_info['consumer'],
+                self._substrate, self._logger, self._kp, self._charging_info['consumer'],
                 compose_delivery_info(refund_token, refund_info),
-                compose_delivery_info(spent_token, spent_info), self._logger)
+                compose_delivery_info(spent_token, spent_info))
 
             P2PUtils.send_service_deliver(
                 self._redis, self._kp, self._charging_info['consumer'],
@@ -435,7 +435,7 @@ class BusinessLogic():
         r = None
         try:
             self._logger.info('reading did...')
-            r = read_did(self._substrate, self._kp, self._logger)
+            r = read_did(self._substrate, self._logger, self._kp)
             if r.is_success:
                 event = [_.value for _ in r.triggered_events
                          if _.value['event_id'] == 'AttributeRead'][0]["attributes"]
@@ -444,12 +444,12 @@ class BusinessLogic():
                     raise IOError(f'The did document, {did_doc}, is not the same as default setting')
                 self._logger.info(f'successfully read did: {did_doc}')
         except Exception as err:
-            self._logger.error(f'failed to read did: {err}')
+            self._logger.error(f'failed to read did: {err}', exc_info=True)
 
         if r is not None and not r.is_success:
             try:
                 self._logger.info('publishing did...')
-                r = publish_did(self._substrate, self._kp, self._did_path, self._logger)
+                r = publish_did(self._substrate, self._logger, self._kp, self._did_path)
             except Exception as err:
                 self._logger.error(f'failed to publish did: {err}')
 
@@ -466,7 +466,6 @@ class BusinessLogic():
             try:
                 self.process_event(event)
             except BrokenPipeError:
-                self._logger.error('detail: broken pipe error', exc_info=True)
                 self.emit_log({
                     'desc': 'Broken pipe happens, please check',
                 })

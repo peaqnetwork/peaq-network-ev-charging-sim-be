@@ -13,22 +13,22 @@ class TestChainUtils(unittest.TestCase):
     def test_publish_did_fail(self):
         mock_substrate_obj = mock.Mock()
         kp = Keypair.create_from_uri('//Moon')
-        self.assertRaises(IOError, ChainUtils.publish_did, mock_substrate_obj, kp, 'etc/did_doc.json', None)
+        self.assertRaises(IOError, ChainUtils.publish_did, mock_substrate_obj, None, kp, 'etc/did_doc.json')
 
     def test_publish_did_succ(self):
         mock_substrate_obj = mock.Mock()
         kp = Keypair.create_from_uri('//Bob//stash')
-        ChainUtils.publish_did(mock_substrate_obj, kp, 'etc/did_doc.json', None)
+        ChainUtils.publish_did(mock_substrate_obj, None, kp, 'etc/did_doc.json')
 
     def test_republish_did_fail(self):
         mock_substrate_obj = mock.Mock()
         kp = Keypair.create_from_uri('//Moon')
-        self.assertRaises(IOError, ChainUtils.republish_did, mock_substrate_obj, kp, 'etc/did_doc.json', None)
+        self.assertRaises(IOError, ChainUtils.republish_did, mock_substrate_obj, None, kp, 'etc/did_doc.json')
 
     def test_republish_did_succ(self):
         mock_substrate_obj = mock.Mock()
         kp = Keypair.create_from_uri('//Bob//stash')
-        ChainUtils.republish_did(mock_substrate_obj, kp, 'etc/did_doc.json', None)
+        ChainUtils.republish_did(mock_substrate_obj, None, kp, 'etc/did_doc.json')
 
 
 if __name__ == '__main__':

@@ -10,7 +10,8 @@ from src import chain_utils as ChainUtils
 TOKEN_NUM_BASE = 10 ** 5
 
 
-def fund(substrate: SubstrateInterface, kp_dst: Keypair, kp_sudo: Keypair, token_num: int):
+@ChainUtils.broken_pipe_retry
+def fund(substrate: SubstrateInterface, logger: logging.Logger, kp_dst: Keypair, kp_sudo: Keypair, token_num: int):
     payload = substrate.compose_call(
         call_module='Balances',
         call_function='set_balance',
@@ -35,10 +36,11 @@ def fund(substrate: SubstrateInterface, kp_dst: Keypair, kp_sudo: Keypair, token
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    ChainUtils.show_extrinsic(receipt, 'fund', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'fund', logger)
 
 
-def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, kp_consumer: Keypair,
+@ChainUtils.broken_pipe_retry
+def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, logger: logging.Logger, kp_consumer: Keypair,
                                     kp_provider: Keypair, token_num: int):
     logging.info('----- Consumer deposit money to multisig wallet')
     threshold = 2
@@ -52,7 +54,7 @@ def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, kp_consumer: 
             'value': token_num
         })
 
-    nonce = ChainUtils.get_account_nonce(substrate, kp_consumer.ss58_address, logging.getLogger('logger'))
+    nonce = substrate.get_account_nonce(kp_consumer.ss58_address)
     extrinsic = substrate.create_signed_extrinsic(
         call=call,
         keypair=kp_consumer,
@@ -61,13 +63,14 @@ def deposit_money_to_multsig_wallet(substrate: SubstrateInterface, kp_consumer: 
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    ChainUtils.show_extrinsic(receipt, 'transfer', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'transfer', logger)
 
 
-def send_service_request(substrate: SubstrateInterface, kp_consumer: Keypair,
+@ChainUtils.broken_pipe_retry
+def send_service_request(substrate: SubstrateInterface, logger: logging.Logger, kp_consumer: Keypair,
                          kp_provider: Keypair, token_num: int):
     logging.info('----- Consumer sends the service requested to peaq-transaction')
-    nonce = ChainUtils.get_account_nonce(substrate, kp_consumer.ss58_address, logging.getLogger('logger'))
+    nonce = substrate.get_account_nonce(kp_consumer.ss58_address)
     call = substrate.compose_call(
         call_module='Transaction',
         call_function='service_requested',
@@ -84,11 +87,12 @@ def send_service_request(substrate: SubstrateInterface, kp_consumer: Keypair,
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    ChainUtils.show_extrinsic(receipt, 'service_requested', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'service_requested', logger)
 
 
+@ChainUtils.broken_pipe_retry
 def send_spent_token_from_multisig_wallet(
-        substrate: SubstrateInterface, kp_consumer: Keypair,
+        substrate: SubstrateInterface, logger: logging.Logger, kp_consumer: Keypair,
         kp_provider: Keypair, token_num: int, threshold: int):
 
     logging.info('----- Provider asks the spent token')
@@ -100,7 +104,7 @@ def send_spent_token_from_multisig_wallet(
             'value': token_num * TOKEN_NUM_BASE
         })
 
-    nonce = ChainUtils.get_account_nonce(substrate, kp_provider.ss58_address, logging.getLogger('logger'))
+    nonce = substrate.get_account_nonce(kp_provider.ss58_address)
 
     as_multi_call = substrate.compose_call(
         call_module='MultiSig',
@@ -122,7 +126,7 @@ def send_spent_token_from_multisig_wallet(
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    ChainUtils.show_extrinsic(receipt, 'as_multi', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'as_multi', logger)
     info = receipt.get_extrinsic_identifier().split('-')
     return {
         'tx_hash': receipt.extrinsic_hash,
@@ -131,8 +135,9 @@ def send_spent_token_from_multisig_wallet(
     }
 
 
+@ChainUtils.broken_pipe_retry
 def send_refund_token_from_multisig_wallet(
-        substrate: SubstrateInterface, kp_consumer: Keypair,
+        substrate: SubstrateInterface, logger: logging.Logger, kp_consumer: Keypair,
         kp_provider: Keypair, token_num: int, threshold: int):
     logging.info('----- Provider asks the refund token')
     payload = substrate.compose_call(
@@ -143,7 +148,7 @@ def send_refund_token_from_multisig_wallet(
             'value': token_num * TOKEN_NUM_BASE
         })
 
-    nonce = ChainUtils.get_account_nonce(substrate, kp_provider.ss58_address, logging.getLogger('logger'))
+    nonce = substrate.get_account_nonce(kp_provider.ss58_address)
 
     as_multi_call = substrate.compose_call(
         call_module='MultiSig',
@@ -165,7 +170,7 @@ def send_refund_token_from_multisig_wallet(
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    ChainUtils.show_extrinsic(receipt, 'as_multi', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'as_multi', logger)
     info = receipt.get_extrinsic_identifier().split('-')
     return {
         'tx_hash': receipt.extrinsic_hash,
@@ -174,9 +179,10 @@ def send_refund_token_from_multisig_wallet(
     }
 
 
-def approve_token(substrate: SubstrateInterface, kp_sign: Keypair,
+@ChainUtils.broken_pipe_retry
+def approve_token(substrate: SubstrateInterface, logger: logging.Logger, kp_sign: Keypair,
                   other_signatories: [str], threshold: int, info: dict):
-    nonce = ChainUtils.get_account_nonce(substrate, kp_sign.ss58_address, logging.getLogger('logger'))
+    nonce = substrate.get_account_nonce(kp_sign.ss58_address)
 
     as_multi_call = substrate.compose_call(
         call_module='MultiSig',
@@ -197,4 +203,4 @@ def approve_token(substrate: SubstrateInterface, kp_sign: Keypair,
     )
 
     receipt = substrate.submit_extrinsic(extrinsic, wait_for_inclusion=True)
-    ChainUtils.show_extrinsic(receipt, 'approve_as_multi', logging.getLogger('logger'))
+    ChainUtils.show_extrinsic(receipt, 'approve_as_multi', logger)

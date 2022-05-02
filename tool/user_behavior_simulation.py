@@ -93,9 +93,11 @@ def user_simulation_test(ws_url: str,
         sio.disconnect()
 
         token_num = token_deposit * ToolUtils.TOKEN_NUM_BASE
-        ToolUtils.deposit_money_to_multsig_wallet(substrate, kp_consumer, kp_provider, token_num)
+        ToolUtils.deposit_money_to_multsig_wallet(
+            substrate, logging.getLogger('logger'),
+            kp_consumer, kp_provider, token_num)
         if not p2p_flag:
-            ToolUtils.send_service_request(substrate, kp_consumer, kp_provider, token_num)
+            ToolUtils.send_service_request(substrate, logging.getLogger('logger'), kp_consumer, kp_provider, token_num)
             P2PUtils.send_service_request(r, kp_consumer, kp_provider.ss58_address, token_num)
             logging.info('---- Start charging and wait')
         else:
@@ -167,10 +169,10 @@ class RedisMonitor():
                     'call_hash': event.service_delivered_data.spent_info.call_hash
                 }
                 ToolUtils.approve_token(
-                    self._substrate, self._kp_consumer,
+                    self._substrate, logging.getLogger('logger'), self._kp_consumer,
                     [provider_addr], self._threshold, spent_info)
                 ToolUtils.approve_token(
-                    self._substrate, self._kp_consumer,
+                    self._substrate, logging.getLogger('logger'), self._kp_consumer,
                     [provider_addr], self._threshold, refund_info)
             logging.info(f"{event.event_id}: {event}")
 
