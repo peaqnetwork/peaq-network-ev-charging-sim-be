@@ -38,6 +38,17 @@ spec:
       serviceAccountName: {{ template "fullname" . }}
 {{- end }}
 {{- end }}
+      initContainers:
+      - name: {{ .Values.redis.name }}
+        image:  "{{ .Values.redis.image }}:{{ .Values.redis.tag }}"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: VERSION
+            value: latest
+        envFrom: null
+        ports:
+        - name: tcp
+          containerPort: {{ .Values.redis.internalPort }}
       containers:
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -83,16 +94,6 @@ spec:
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
         resources:
 {{ toYaml .Values.resources | indent 12 }}
-      - name: {{ .Values.redis.name }}
-        image:  "{{ .Values.redis.image }}:{{ .Values.redis.tag }}"
-        imagePullPolicy: IfNotPresent
-        env:
-          - name: VERSION
-            value: latest
-        envFrom: null
-        ports:
-        - name: tcp
-          containerPort: {{ .Values.redis.internalPort }}
       - name: {{ .Values.simp2p.name }}
         image:  "{{ .Values.simp2p.image }}:{{ .Values.simp2p.tag }}"
         imagePullPolicy: Always
