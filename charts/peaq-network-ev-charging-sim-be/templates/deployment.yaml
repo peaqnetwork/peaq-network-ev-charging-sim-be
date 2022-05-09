@@ -49,7 +49,6 @@ spec:
         ports:
         - name: tcp
           containerPort: {{ .Values.redis.internalPort }}
-        command: ['sh', '-c', 'redis-cli ping']
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
