@@ -1,3 +1,4 @@
+---
 {{- if .Values.knativeDeploy }}
 {{- else }}
 apiVersion: apps/v1
@@ -10,35 +11,27 @@ metadata:
 {{- if .Values.deploymentLabels }}
 {{ toYaml .Values.deploymentLabels | indent 4 }}
 {{- end }}
+    app: "{{ template "fullname" . }}" 
 spec:
+  serviceName: {{ template "fullname" . }}-headless
   selector:
     matchLabels:
-      app: {{ template "fullname" . }}
-{{- if .Values.hpa.enabled }}
-{{- else }}
- replicas: {{ .Values.replicaCount }}
-{{- end }}
- serviceName:  {{ .Values.service.name }}
+      app: "{{ template "fullname" . }}"
+  replicas: "{{ .Values.replicas }}"
+  podManagementPolicy: "{{ .Values.podManagementPolicy }}"
+  updateStrategy:
+    type: "{{ .Values.updateStrategy }}"
   template:
     metadata:
+      name: "{{ template "fullname" . }}"
       labels:
-        draft: {{ default "draft-app" .Values.draft }}
-        app: {{ template "fullname" . }}
-{{- if .Values.podsLabels }}
-{{ toYaml .Values.podsLabels | indent 6 }}
-{{- end }}
-{{- if .Values.podAnnotations }}
-      annotations:
-{{ toYaml .Values.podAnnotations | indent 8 }}
-{{- end }}
-    spec:
-{{- if .Values.serviceAccount.enabled }}
-{{- if .Values.serviceAccount.name }}
-      serviceAccountName: {{ .Values.serviceAccount.name }}
-{{- else }}
-      serviceAccountName: {{ template "fullname" . }}
-{{- end }}
-{{- end }}
+        release: {{ .Release.Name | quote }}
+        chart: "{{ .Chart.Name }}"
+        app: "{{ template "fullname" . }}"
+        {{- range $key, $value := .Values.labels }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+    spec:      
       containers:
       - name: {{ .Values.redis.name }}
         image:  "{{ .Values.redis.image }}:{{ .Values.redis.tag }}"
@@ -119,3 +112,8 @@ spec:
       - name: {{ quote $pval }}
 {{- end }}
 {{- end }}
+
+      
+          
+        
+       
