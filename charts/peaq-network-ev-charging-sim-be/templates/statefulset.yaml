@@ -16,13 +16,9 @@ spec:
       app: {{ template "fullname" . }}
 {{- if .Values.hpa.enabled }}
 {{- else }}
-  serviceName: {{ .Values.service.name }}
-{{- else }}
-  serviceName: {{ template "fullname" . }}
+ replicas: {{ .Values.replicaCount }}
 {{- end }}
-  replicas: {{ .Values.replicaCount }}
-{{- end }}
-  minReadySeconds: 10
+ serviceName:  {{ .Values.service.name }}
   template:
     metadata:
       labels:
