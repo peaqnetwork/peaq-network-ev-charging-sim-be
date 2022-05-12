@@ -21,7 +21,7 @@ antiAffinity: "hard"
 # This is the node affinity settings as defined in
 # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#node-affinity-beta-feature
 nodeAffinity: {}
-#nameOverride: peaq
+nameOverride: temp
 # Add labels to the deployment
 deploymentLabels: {}
 simbeSecrets:
