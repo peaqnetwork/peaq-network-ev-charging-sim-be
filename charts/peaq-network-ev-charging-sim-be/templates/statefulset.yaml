@@ -13,7 +13,7 @@ metadata:
 {{- end }}
     app: "{{ template "fullname" . }}" 
 spec:
-  serviceName: {{ template "fullname" }}-headless
+  serviceName: {{ template "fullname" . }}-headless
   selector:
     matchLabels:
       app: "{{ template "fullname" . }}"
