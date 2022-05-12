@@ -2,7 +2,7 @@
 apiVersion: flagger.app/v1beta1
 kind: Canary
 metadata:
-  name: {{ template "fullname" . }}
+  name: "{{ .Chart.Name }}"
   labels:
     draft: {{ default "draft-app" .Values.draft }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
@@ -14,19 +14,19 @@ spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ template "fullname" . }}
+    name: "{{ .Chart.Name }}"
   progressDeadlineSeconds: {{ .Values.canary.progressDeadlineSeconds }}
   {{- if .Values.hpa.enabled }}
   autoscalerRef:
     apiVersion: autoscaling/v2beta1
     kind: HorizontalPodAutoscaler
-    name: {{ template "fullname" . }}
+    name: "{{ .Chart.Name }}"
   {{- end }}
   service:
     port: {{ .Values.service.externalPort }}
     targetPort: {{ .Values.service.internalPort }}
     gateways:
-    - {{ template "fullname" . }}
+    - "{{ .Chart.Name }}"
     hosts:
     - {{ .Values.canary.host | default (printf "%s%s%s"  .Values.service.name .Values.jxRequirements.ingress.namespaceSubDomain .Values.jxRequirements.ingress.domain) }}
   analysis:
@@ -48,7 +48,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
-  name: {{ template "fullname" . }}
+  name: "{{ .Chart.Name }}"
 {{- if .Values.canary.gatewayLabels }}
   labels:
 {{ toYaml .Values.canary.gatewayLabels | indent 4 }}

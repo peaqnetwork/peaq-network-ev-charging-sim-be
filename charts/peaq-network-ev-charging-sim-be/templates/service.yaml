@@ -6,7 +6,7 @@ metadata:
 {{- if .Values.service.name }}
   name: {{ .Values.service.name }}
 {{- else }}
-  name: {{ template "fullname" . }}
+  name: "{{ .Chart.Name }}"
 {{- end }}
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
@@ -25,7 +25,7 @@ spec:
     protocol: TCP
     name: http
   selector:
-    app: {{ template "fullname" . }}
+    app: "{{ .Chart.Name }}"
 {{- end }}
 ---
 {{- if or .Values.knativeDeploy .Values.canary.enabled }}
@@ -36,7 +36,7 @@ metadata:
 {{- if .Values.service_p2p.name }}
   name: {{ .Values.service_p2p.name }}
 {{- else }}
-  name: {{ template "fullname" . }}
+  name: "{{ .Chart.Name }}"
 {{- end }}
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
@@ -55,5 +55,5 @@ spec:
     protocol: TCP
     name: p2p
   selector:
-    app: {{ template "fullname" . }}
+    app: "{{ .Chart.Name }}"
 {{- end }}
