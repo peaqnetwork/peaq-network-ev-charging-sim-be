@@ -4,30 +4,30 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ template "fullname" . }}
+  name: "{{ .Chart.Name }}"
   labels:
     draft: {{ default "draft-app" .Values.draft }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
 {{- if .Values.deploymentLabels }}
 {{ toYaml .Values.deploymentLabels | indent 4 }}
 {{- end }}
-    app: "{{ template "fullname" . }}" 
+    app: "{{ .Chart.Name }}" 
 spec:
-  serviceName: {{ template "fullname" . }}-headless
+  serviceName: {{ .Chart.Name  }}-headless
   selector:
     matchLabels:
-      app: "{{ template "fullname" . }}"
+      app: "{{ .Chart.Name }}"
   replicas: {{ .Values.replicas }}
   podManagementPolicy: "{{ .Values.podManagementPolicy }}"
   updateStrategy:
     type: "{{ .Values.updateStrategy }}"
   template:
     metadata:
-      name: "{{ template "fullname" . }}"
+      name: "{{ .Chart.Name }}"
       labels:
         release: {{ .Release.Name | quote }}
         chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
-        app: "{{ template "fullname" . }}"
+        app: "{{ .Chart.Name }}"
         {{- range $key, $value := .Values.labels }}
         {{ $key }}: {{ $value | quote }}
         {{- end }}
