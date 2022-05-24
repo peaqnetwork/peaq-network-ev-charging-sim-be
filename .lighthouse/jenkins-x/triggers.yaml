@@ -15,6 +15,12 @@ spec:
     ignore_changes: "OWNERS"
     branches:
     - ^dev$
+  - name: staging
+    context: "staging"
+    source: "staging.yaml"
+    ignore_changes: "OWNERS"
+    branches:
+    - ^staging$
   - name: release
     context: "release"
     source: "release.yaml"
