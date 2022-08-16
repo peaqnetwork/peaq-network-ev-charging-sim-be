@@ -66,3 +66,5 @@ etc/log*
 
 # Test cases
 test/tmp
+
+.vscode
