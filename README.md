@@ -31,7 +31,7 @@ python3 be.py
 There are two ways to test the charging simulator
 
 #### Run the user simulator tools directly
-In this test, the user simulator tool sends/receives the message on the Redis instead of communicating with the P2P node.
+In this test, the user simulator tool sends/receives the message on the Redis instead of communicating with the P2P node
 #### Environment
 Remote environment
 ```
