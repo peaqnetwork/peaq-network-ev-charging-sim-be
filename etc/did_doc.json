@@ -17,7 +17,7 @@
   "signature": {
     "type": "Sr25519VerificationKey2020",
     "issuer": "did:peaq:5EhqcLBWTWq5pE45wnkFFVEzL6f8TSLU2mxDZcE3FaVg726E",
-    "hash": "c012852b6d4af0b2f0c86050b559cc930bf351421aa488a24d7e8e7eb5f3f709eabfbc540a2570f7d8263267d1a7bb2c95acb3c871ed87d4f6db61f9d81b8e81"
+    "hash": "32eb2c4db6dde913928ecfd49ff754bd4834d3e142408a52bb0bf8b46ba5aa354b3d184b05cf123e0fdb65c055c8d664626235794c3e43c4c63bce85dbd3dd87"
   },
   "services": [
     {
@@ -27,7 +27,7 @@
     },
     {
       "id": "5EChUec3ZQhUvY1g52ZbfBVkqjUY9Kcr6mcEvQMbmd38shQL",
-      "stringData": "/ip4/18.196.78.241/tcp/10333/p2p/12D3KooWHCxuFdsyZMiLPni3rwsJ52KwGUELJCmNqeX17qKmzfjh"
+      "stringData": "/ip4/18.159.14.109/tcp/10333/p2p/12D3KooWHCxuFdsyZMiLPni3rwsJ52KwGUELJCmNqeX17qKmzfjh"
     },
     {
       "id": "5EChUec3ZQhUvY1g52ZbfBVkqjUY9Kcr6mcEvQMbmd38shQL",
