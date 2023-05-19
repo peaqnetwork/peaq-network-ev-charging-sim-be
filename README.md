@@ -144,5 +144,5 @@ docker run -it --rm --network=host be_user --node_ws wss://wss.test.peaq.network
 ```
 5. Send the service request from the P2P client (peaq-network-ev-charging-sim-iface).
 You should enter `ServiceRequested` on the peaq-network-ev-charging-sim-iface command line tool via the standand input.
-6. Send the charging finish from the P2P client (peaq-network-ev-charging-sim-iface)
+6. Send the charging finish from the P2P client (peaq-network-ev-charging-sim-iface).
 You should enter `StopCharging` on the peaq-network-ev-charging-sim-iface command line tool via the standand input.
