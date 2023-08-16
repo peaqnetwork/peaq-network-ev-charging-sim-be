@@ -13,11 +13,9 @@ tolerations: []
 # By default this will make sure two pods don't end up on the same node
 # Changing this to a region would allow you to spread pods across regions
 antiAffinityTopologyKey: "kubernetes.io/hostname"
-
 # Hard means that by default pods will only be scheduled if there are enough nodes for them
 # and that they will never end up on the same node. Setting this to soft will do this "best effort"
 antiAffinity: "hard"
-
 # This is the node affinity settings as defined in
 # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#node-affinity-beta-feature
 nodeAffinity: {}
@@ -27,10 +25,9 @@ deploymentLabels: {}
 simbeSecrets:
   name: simulator-be
 image:
-  repository: draft
-  tag: dev
+  repository: 041640568050.dkr.ecr.eu-central-1.amazonaws.com/peaqnetwork/peaq-network-ev-charging-sim-be
+  tag: 0.1.34
   pullPolicy: IfNotPresent
-
 redis:
   name: redis
   image: redis
@@ -39,21 +36,17 @@ redis:
 simp2p:
   name: simp2p
   image: 041640568050.dkr.ecr.eu-central-1.amazonaws.com/peaqnetwork/peaq-network-ev-charging-sim-be-p2p
-  tag: latest 
+  tag: latest
 # optional list of image pull secrets to use to pull images
 jx:
   # optional image pull secrets
   imagePullSecrets: []
-
   # whether to create a Release CRD when installing charts with Release CRDs included
   releaseCRD: true
-
 # define environment variables here as a map of key: value
 env:
-
 # enable this flag to use knative serve to deploy the app
 knativeDeploy: false
-
 # HorizontalPodAutoscaler
 hpa:
   enabled: false
@@ -63,7 +56,6 @@ hpa:
   memoryTargetAverageUtilization: 80
   # Add labels to the HPA
   labels: {}
-
 # Canary deployments
 # If enabled, Istio and Flagger need to be installed in the cluster
 canary:
@@ -86,7 +78,6 @@ canary:
   labels: {}
   # Add labels to the canary gateway
   gatewayLabels: {}
-
 service_p2p:
   name: peaq-network-ev-charging-sim-be-p2p
   type: LoadBalancer
@@ -118,7 +109,6 @@ readinessProbe:
   timeoutSeconds: 1
   # Optional distinct readiness probe path, if empty the probePath is used
   probePath: ""
-
 # custom ingress annotations on this service
 ingress:
   annotations: {}
@@ -126,15 +116,13 @@ ingress:
   classAnnotation: ""
   # Add labels to the ingress
   labels: {}
-
   # ingress path type
   pathType: ImplementationSpecific
-
 serviceAccount:
   enabled: true
   name: ""
   annotations: {}
-#    iam.gke.io/gcp-service-account: my-sa-in-gke
+  #    iam.gke.io/gcp-service-account: my-sa-in-gke
   # Add labels to the SA
   labels: {}
 #    my-custom-label: value
@@ -147,7 +135,6 @@ jxRequirements:
     #  kubernetes.io/ingress.class: nginx
 
     apiVersion: "networking.k8s.io/v1"
-
     # the domain for hosts
     domain: ""
     externalDNS: false
