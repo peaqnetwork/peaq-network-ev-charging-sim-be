@@ -115,7 +115,7 @@ def send_spent_token_from_multisig_wallet(
             'maybe_timepoint': None,
             'call': payload.value,
             'store_call': True,
-            'max_weight': 1000000000,
+            'max_weight': {'ref_time': 1000000000}
         })
 
     extrinsic = substrate.create_signed_extrinsic(
@@ -159,7 +159,7 @@ def send_refund_token_from_multisig_wallet(
             'maybe_timepoint': None,
             'call': payload.value,
             'store_call': True,
-            'max_weight': 1000000000,
+            'max_weight': {'ref_time': 1000000000}
         })
 
     extrinsic = substrate.create_signed_extrinsic(
@@ -192,7 +192,7 @@ def approve_token(substrate: SubstrateInterface, logger: logging.Logger, kp_sign
             'other_signatories': other_signatories,
             'maybe_timepoint': info['timepoint'],
             'call_hash': info['call_hash'],
-            'max_weight': 1000000000,
+            'max_weight': {'ref_time': 1000000000}
         })
 
     extrinsic = substrate.create_signed_extrinsic(
